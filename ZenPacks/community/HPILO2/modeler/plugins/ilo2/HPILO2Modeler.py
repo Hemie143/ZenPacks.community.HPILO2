@@ -68,6 +68,9 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         log.info('Processing {} for device {}'.format(self.name(), device.id))
         log.info('Results:{}'.format(results))
 
+        #self.ilo_ipaddr = None
+        self.total_mem = 0
+
         maps = []
 
         result_data = {}
@@ -140,6 +143,22 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                 if field.get(tagk) == key:
                     return field.get(tagv)
         return 'Unknown'
+
+    def get_host_data_records(self, key):
+        result = []
+        for item in self.host_data:
+            record = item.get('SMBIOS_RECORD', [])
+            for i in record:
+                field = i.get('FIELD')
+                if field.get('NAME') == 'Subject' and field.get('VALUE') == key:
+                    result.append(record)
+        return result
+
+    def get_field_value(self, fields, name):
+        for field in fields:
+            if field['FIELD']['NAME'] == name:
+                return field['FIELD']['VALUE']
+        return
 
     # Formatters
     def standardize(self, value):
