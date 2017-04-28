@@ -30,10 +30,21 @@ classes:
         label: Serial Number
       productName:
         label: Product
-      cpuCount:
+      get_cpu_count:
         label: CPU Count
+        api_only: true
+        api_backendtype: method
       totalRam:
         label: Total RAM
+        renderer: Zenoss.render.bytesString
+      productId:
+        label: Product ID
+        grid_display: false
+      serverName:
+        label: Server Name
+        details_display: false
+      perfId:
+        grid_display: false
 
 class_relationships:
   - HPILO2Device(hpilo2chassis) 1:MC HPILO2Chassis

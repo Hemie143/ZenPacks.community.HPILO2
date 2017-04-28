@@ -5,11 +5,14 @@ from twisted.internet.defer import DeferredSemaphore, DeferredList, inlineCallba
 
 # Zenoss imports
 from Products.DataCollector.plugins.CollectorPlugin import PythonPlugin
+from Products.DataCollector.plugins.DataMaps import MultiArgs
+from Products.DataCollector.plugins.DataMaps import ObjectMap, RelationshipMap
+from Products.ZenUtils.Utils import prepId
+
 from ZenPacks.community.HPILO2.lib.ILO2XMLParser import ILO2XMLParser
 from ZenPacks.community.HPILO2.lib.ILO2ProtocolHandler import ILO2ProtocolHandler
+from ZenPacks.community.HPILO2.lib.ILO2Maps import get_object_map
 from ZenPacks.community.HPILO2.modeler.HPPluginBase import HPPluginBase
-
-#from ZenPacks.community.HPILO2.modeler.ilo2Plugin import ilo2Plugin, get_cmd
 
 def get_cmd(cmd='GET_EMBEDDED_HEALTH', tag='SERVER_INFO'):
     '''return formatted RIBCL command'''
@@ -91,7 +94,20 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         # get some global info we can use throughout
         self.get_product_serial()
         self.get_ilo_info()
-        self.get_chassis_mem()
+        self.get_chassis_mem(log)
+
+        if len(self.host_data) == 0:
+            log.warning('Command "{}" returned no output'.format('GET_HOST_DATA'))
+            return
+        if len(self.fw_data) == 0:
+            log.warning('Command "{}" returned no output'.format('GET_FW_VERSION'))
+            return
+        if len(self.health_data) == 0:
+            log.warning('Command "{}" returned no output'.format('GET_EMBEDDED_HEALTH_DATA'))
+            return
+
+        maps.append(self.get_device_map())
+        maps.append(self.get_chassis_maps())
 
         return maps
 
@@ -118,7 +134,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                 if ipaddr != 'N/A':
                     self.ilo_ipaddr = ipaddr
 
-    def get_chassis_mem(self):
+    def get_chassis_mem(self, log):
         record = self.get_host_data_records('Memory Device')
         for item in record:
             memorySize = self.get_field_value(item, 'Size')
@@ -127,7 +143,6 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         return
 
     # Parser helpers
-
     def get_health_data_section(self, key):
         """return component object data from a given section"""
         for h in self.health_data:
@@ -159,6 +174,37 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             if field['FIELD']['NAME'] == name:
                 return field['FIELD']['VALUE']
         return
+
+    # Components modelers
+    def get_device_map(self):
+        '''Device Map'''
+        om = self.objectMap()
+        om.setHWProductKey = MultiArgs(self.product, 'HPILO2')
+        om.setHWSerialNumber = self.serial
+        om.snmpSysName = self.server_name
+        om.snmpDescr = self.product_id
+        return om
+
+    def get_chassis_maps(self):
+        """HPILO2Chassis"""
+        maps = []
+        ob_map = get_object_map('HPILO2Chassis')
+        om = ObjectMap(ob_map)
+        name = self.serial
+        om.id = prepId(name)
+        om.title = name
+        om.serverName = self.server_name
+        om.serialNo = self.serial
+        om.productId = self.product_id
+        om.productName = self.product
+        om.totalRam = self.total_mem
+        om.perfId = "HPILO2Chassis"
+        self.compname = 'hpilo2chassis/%s' % om.id
+        maps.append(om)
+        return RelationshipMap(relname='hpilo2chassis',
+                               modname='ZenPacks.community.HPILO2.HPILO2Chassis',
+                               objmaps=maps)
+
 
     # Formatters
     def standardize(self, value):
