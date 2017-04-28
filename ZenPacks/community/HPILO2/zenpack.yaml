@@ -1,0 +1,48 @@
+name: ZenPacks.community.HPILO2
+
+zProperties:
+  DEFAULTS:
+    category: ILO2
+  zILO2UserName:
+    default: ''
+  zILO2Password:
+    type: password
+  zILO2UseSSL:
+    type: boolean
+    default: True
+  zILO2Port:
+    default: 443
+
+classes:
+  HPILO2Device:
+    base: [zenpacklib.Device]
+    label: HP Server
+
+  HPILO2Chassis:
+    base: [zenpacklib.Component]
+    label: HP Chassis
+    plural_label: HP Chassis
+
+    properties:
+      enclosure:
+        label: Enclosure
+      serialNo:
+        label: Serial Number
+      productName:
+        label: Product
+      cpuCount:
+        label: CPU Count
+      totalRam:
+        label: Total RAM
+
+class_relationships:
+  - HPILO2Device(hpilo2chassis) 1:MC HPILO2Chassis
+
+device_classes:
+  /Server/HPILO2:
+    zProperties:
+      zPythonClass: ZenPacks.community.HPILO2.HPILO2Device
+      zPingMonitorIgnore: True
+      zSnmpMonitorIgnore: True
+      zCollectorPlugins:
+         - ilo2.HPILO2Modeler
