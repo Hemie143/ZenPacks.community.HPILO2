@@ -48,6 +48,7 @@ classes:
 
 class_relationships:
   - HPILO2Device(hpilo2chassis) 1:MC HPILO2Chassis
+  #- HPILO2Chassis 1:MC HPILO2SystemBoard
 
 device_classes:
   /Server/HPILO2:

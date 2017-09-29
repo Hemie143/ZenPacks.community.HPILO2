@@ -8,10 +8,14 @@
 ##############################################################################
 # master dictionary for object maps
 ARCH_MAP = { 'HPILO2Chassis': {'totalRam': None,
-               'enclosure': None,
-               'productId': None,
-               'productName': None,
-               'serialNo': None},
+                               'enclosure': None,
+                               'productId': None,
+                               'productName': None,
+                               'serialNo': None},
+             'HPILO2SystemBoard': {'productName': None,
+                                   'romVer': None,
+                                   'serialNo': None,
+                                   }
  }
 
 '''

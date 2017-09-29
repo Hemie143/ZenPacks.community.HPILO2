@@ -34,13 +34,13 @@ class HPPluginBase(object):
                                         objmaps=compmaps))
         return maps
 
-    """
+
     def get_maps(self, maps, compname, relname, meta_type):
         return RelationshipMap(relname=relname,
                                compname=compname,
                                modname='ZenPacks.community.HPILO2.{}'.format(meta_type),
                                objmaps=maps)
-
+    """
     def write_test_data(self, filename, results):
         file = open('/tmp/{}.pickle'.format(filename), 'wb+')
         pickle.dump(results, file)

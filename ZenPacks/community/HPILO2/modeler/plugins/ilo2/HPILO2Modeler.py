@@ -108,6 +108,10 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
 
         maps.append(self.get_device_map())
         maps.append(self.get_chassis_maps())
+        #maps.append(self.get_sys_board())
+
+
+        log.info('Maps:{}'.format(maps))
 
         return maps
 
@@ -199,12 +203,27 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         om.productName = self.product
         om.totalRam = self.total_mem
         om.perfId = "HPILO2Chassis"
-        self.compname = 'hpilo2chassis/%s' % om.id
+        #self.compname = 'hpilo2chassis/%s' % om.id
         maps.append(om)
+        # TODO: enhance relationship name
         return RelationshipMap(relname='hpilo2chassis',
                                modname='ZenPacks.community.HPILO2.HPILO2Chassis',
                                objmaps=maps)
 
+    def get_sys_board(self):
+        """HPILO2SystemBoard"""
+        #maps = []
+        ob_map = get_object_map('HPILO2SystemBoard')
+        om = ObjectMap(ob_map)
+        name = self.product
+        om.id = prepId(name)
+        om.title = name
+        om.romVer = '{} {}'.format(self.find_host_data_item('Family'),
+                                   self.find_host_data_item('Date'))
+        om.serialNo = self.serial
+        om.productName = self.product
+        #maps.append(om)
+        return self.get_maps([om], self.compname, 'hpilo2systemboards', 'HPILO2SystemBoard')
 
     # Formatters
     def standardize(self, value):
