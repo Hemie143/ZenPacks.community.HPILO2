@@ -15,8 +15,21 @@ ARCH_MAP = { 'HPILO2Chassis': {'totalRam': None,
              'HPILO2SystemBoard': {'productName': None,
                                    'romVer': None,
                                    'serialNo': None,
-                                   }
- }
+                                   },
+             'HPILO2ManagementController': {'firmware': None,
+                                            'firmwareDate': None,
+                                            'ipv4Address': None,
+                                            'licenseType': None,
+                                            },
+             'HPILO2Processor': {'cacheSizeL1': None,
+                                 'cacheSizeL2': None,
+                                 'cacheSizeL3': None,
+                                 'coreCount': None,
+                                 'hyperThread': None,
+                                 'model': None,
+                                 'threadCount': None
+                                 },
+             }
 
 '''
 def check_map(ob_map, ob_type):

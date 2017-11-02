@@ -46,9 +46,67 @@ classes:
       perfId:
         grid_display: false
 
+  HPILO2SystemBoard:
+    base: [zenpacklib.Component]
+    label: HP System Board
+    plural_label: HP System Boards
+
+    properties:
+      productName:
+        label: Product Name
+      romVer:
+        label: Rom Version
+      serialNo:
+        label: Serial Number
+
+  HPILO2ManagementController:
+    base: [zenpacklib.Component]
+    label: HP Management Controller
+
+    properties:
+      firmware:
+        label: Firmware Version
+      firmwareDate:
+        label: Firmware Date
+      ipv4Address:
+        label: ipv4 Address
+      licenseType:
+        label: Active License Type
+        label_width: 148
+
+  HPILO2Processor:
+    base: [zenpacklib.Component]
+    label: HP Processor
+
+    properties:
+      cacheSizeL1:
+        label: L1
+      cacheSizeL2:
+        label: L2
+      cacheSizeL3:
+        label: L3
+      coreCount:
+        label: Cores
+      threadCount:
+        label: Thread Count
+
 class_relationships:
   - HPILO2Device(hpilo2chassis) 1:MC HPILO2Chassis
-  #- HPILO2Chassis 1:MC HPILO2SystemBoard
+  - HPILO2Chassis(hpilo2systemboard) 1:MC HPILO2SystemBoard
+  - HPILO2Chassis(hpilo2managementcontroller) 1:MC HPILO2ManagementController
+  - HPILO2Chassis(hpilo2processors) 1:MC HPILO2Processor
+
+# - HPChassis(hpcoolingfans) 1:MC HPCoolingFan
+# - HPChassis 1:MC HPPCIDevice
+# - HPChassis(hppowersupplies) 1:MC HPServerPowerSupply
+# - HPChassis(hpmemories) 1:MC HPMemory
+# - HPChassis 1:MC HPTemperature
+# - HPChassis(hpnetworkinterfacecontrollers) 1:MC HPNetworkInterfaceController
+# - HPChassis(hpnetworkinterface) 1:MC HPNetworkInterface
+# - HPChassis(hplogicaldrives) 1:MC HPLogicalDrive
+# - HPChassis(hpphysicaldrives) 1:MC HPPhysicalDrive
+# - HPChassis 1:MC HPArrayController
+
 
 device_classes:
   /Server/HPILO2:

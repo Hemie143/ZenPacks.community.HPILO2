@@ -69,9 +69,9 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
 
     def process(self, device, results, log):
         log.info('Processing {} for device {}'.format(self.name(), device.id))
-        log.info('Results:{}'.format(results))
+        #log.info('Results:{}'.format(results))
 
-        #self.ilo_ipaddr = None
+        self.ilo_ipaddr = None
         self.total_mem = 0
 
         maps = []
@@ -108,8 +108,17 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
 
         maps.append(self.get_device_map())
         maps.append(self.get_chassis_maps())
-        #maps.append(self.get_sys_board())
-
+        maps.append(self.get_sys_board())
+        maps.append(self.get_mgmt_ctrl())
+        maps.append(self.get_processors())
+        '''
+        maps.append(self.get_memory())
+        maps.append(self.get_fans())
+        maps.append(self.get_temp_sensors())
+        maps.append(self.get_power_supplies())
+        maps.extend(self.get_storage_maps())
+        maps.append(self.get_nics())
+        '''
 
         log.info('Maps:{}'.format(maps))
 
@@ -156,6 +165,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
 
     def find_host_data_item(self, key, tagk='NAME', tagv='VALUE'):
         for item in self.host_data:
+            # print('host_data_item: {}'.format(item))
             record = item.get('SMBIOS_RECORD', [])
             for i in record:
                 field = i.get('FIELD')
@@ -191,7 +201,6 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
 
     def get_chassis_maps(self):
         """HPILO2Chassis"""
-        maps = []
         ob_map = get_object_map('HPILO2Chassis')
         om = ObjectMap(ob_map)
         name = self.serial
@@ -203,16 +212,14 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         om.productName = self.product
         om.totalRam = self.total_mem
         om.perfId = "HPILO2Chassis"
-        #self.compname = 'hpilo2chassis/%s' % om.id
-        maps.append(om)
+        self.compname = 'hpilo2chassis/%s' % om.id
         # TODO: enhance relationship name
         return RelationshipMap(relname='hpilo2chassis',
                                modname='ZenPacks.community.HPILO2.HPILO2Chassis',
-                               objmaps=maps)
+                               objmaps=[om])
 
     def get_sys_board(self):
         """HPILO2SystemBoard"""
-        #maps = []
         ob_map = get_object_map('HPILO2SystemBoard')
         om = ObjectMap(ob_map)
         name = self.product
@@ -222,8 +229,70 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                                    self.find_host_data_item('Date'))
         om.serialNo = self.serial
         om.productName = self.product
-        #maps.append(om)
-        return self.get_maps([om], self.compname, 'hpilo2systemboards', 'HPILO2SystemBoard')
+        return RelationshipMap(relname='hpilo2systemboard',
+                               compname=self.compname,
+                               modname='ZenPacks.community.HPILO2.HPILO2SystemBoard',
+                               objmaps=[om])
+
+    def get_mgmt_ctrl(self):
+        """Management Controller"""
+        ob_map = get_object_map('HPILO2ManagementController')
+        om = ObjectMap(ob_map)
+        name = self.fw_data.get('MANAGEMENT_PROCESSOR', 'Unknown')
+        om.id = prepId(name)
+        om.title = name
+        om.firmware = self.fw_data.get('FIRMWARE_VERSION', 'Unknown')
+        om.firmwareDate = self.fw_data.get('FIRMWARE_DATE', 'Unknown')
+        om.licenseType = self.fw_data.get('LICENSE_TYPE', 'Unknown')
+        om.ipv4Address = self.ilo_ipaddr
+        om.perfId = "HPManagementController"
+        return RelationshipMap(relname='hpilo2managementcontroller',
+                               compname=self.compname,
+                               modname='ZenPacks.community.HPILO2.HPILO2ManagementController',
+                               objmaps=[om])
+
+    def get_processors(self):
+        """HPProcessor"""
+        maps = []
+
+        for item in self.get_host_data_records('Processor Information'):
+            # print('Processor item {}'.format(item))
+            '''Processor item [{'FIELD': {'NAME': 'Subject', 'VALUE': 'Processor Information'}},
+                {'FIELD': {'NAME': 'Label', 'VALUE': 'Proc 1'}}, 
+                {'FIELD': {'NAME': 'Speed', 'VALUE': '2400 MHz'}}, 
+                {'FIELD': {'NAME': 'Execution Technology', 'VALUE': '4 of 4 cores; 8 threads'}}, 
+                {'FIELD': {'NAME': 'Memory Technology', 'VALUE': '64-bit extensions'}}, 
+                {'FIELD': {'NAME': 'Family', 'VALUE': '179'}}]
+            '''
+            #test = self.get_field_value(item, 'Label')
+            #print('Test: {}'.format(test))
+            ob_map = get_object_map('HPILO2Processor')
+            om = ObjectMap(ob_map)
+            name = self.get_field_value(item, 'Label')
+            if not name or name == '':
+                continue
+            om.id = prepId(name)
+            # model = data.get('NAME', {}).get('VALUE', '')
+            # om.title = model.replace('(R)', '').split('@')[0].strip()
+            om.perfId = name
+            # om.model = model
+            om.speed = self.standardize(self.get_field_value(item, 'Speed'))
+            tech = self.get_field_value(item, 'Execution Technology')
+            try:
+                om.coreCount = re.findall(r'(\d)/\d cores', tech)[0]
+            except:
+                pass
+            try:
+                om.threadCount = re.findall(r'(\d) threads', tech)[0]
+            except:
+                pass
+            maps.append(om)
+        return RelationshipMap(relname='hpilo2processors',
+                               compname=self.compname,
+                               modname='ZenPacks.community.HPILO2.HPILO2Processor',
+                               objmaps=maps)
+
+
 
     # Formatters
     def standardize(self, value):
