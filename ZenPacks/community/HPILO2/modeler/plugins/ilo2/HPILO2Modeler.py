@@ -111,9 +111,9 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         maps.append(self.get_sys_board())
         maps.append(self.get_mgmt_ctrl())
         maps.append(self.get_processors())
+        maps.append(self.get_memory(log))
+        maps.append(self.get_fans(log))
         '''
-        maps.append(self.get_memory())
-        maps.append(self.get_fans())
         maps.append(self.get_temp_sensors())
         maps.append(self.get_power_supplies())
         maps.extend(self.get_storage_maps())
@@ -254,9 +254,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
     def get_processors(self):
         """HPProcessor"""
         maps = []
-
         for item in self.get_host_data_records('Processor Information'):
-            # print('Processor item {}'.format(item))
             '''Processor item [{'FIELD': {'NAME': 'Subject', 'VALUE': 'Processor Information'}},
                 {'FIELD': {'NAME': 'Label', 'VALUE': 'Proc 1'}}, 
                 {'FIELD': {'NAME': 'Speed', 'VALUE': '2400 MHz'}}, 
@@ -264,8 +262,6 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                 {'FIELD': {'NAME': 'Memory Technology', 'VALUE': '64-bit extensions'}}, 
                 {'FIELD': {'NAME': 'Family', 'VALUE': '179'}}]
             '''
-            #test = self.get_field_value(item, 'Label')
-            #print('Test: {}'.format(test))
             ob_map = get_object_map('HPILO2Processor')
             om = ObjectMap(ob_map)
             name = self.get_field_value(item, 'Label')
@@ -292,7 +288,78 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                                modname='ZenPacks.community.HPILO2.HPILO2Processor',
                                objmaps=maps)
 
+    def get_memory(self, log):
+        """HPProcessor"""
+        maps = []
+        for item in self.get_host_data_records('Memory Device'):
+            log.info('MEM item:{}'.format(item))
+            ob_map = get_object_map('HPILO2Memory')
+            om = ObjectMap(ob_map)
+            name = self.get_field_value(item, 'Label')
+            if not name or name == '':
+                continue
+            om.id = prepId(name)
+            om.perfId = name
+            size = self.get_field_value(item, 'Size')
+            if not size or size == 'not installed':
+                continue
+            log.info('Size: {}'.format(size))
+            om.size = self.standardize(size)
+            om.speed = self.standardize((self.get_field_value(item, 'Speed')))
+            maps.append(om)
+        return RelationshipMap(relname='hpilo2memories',
+                               compname=self.compname,
+                               modname='ZenPacks.community.HPILO2.HPILO2Memory',
+                               objmaps=maps)
 
+    def get_fans(self, log):
+        maps = []
+        for item in self.get_health_data_section('FANS'):
+            log.info('Fan: {}'.format(item))
+            data = self.parser.get_merged(item.get('FAN', []))
+            ob_map = get_object_map('HPILO2CoolingFan')
+            om = ObjectMap(ob_map)
+            name = data.get('LABEL', {}).get('VALUE')
+            if not name:
+                continue
+            om.id = prepId(name)
+            om.title = name
+            om.zone = data.get('ZONE', {}).get('VALUE')
+            maps.append(om)
+        return RelationshipMap(relname='hpilo2coolingfans',
+                               compname=self.compname,
+                               modname='ZenPacks.community.HPILO2.HPILO2CoolingFan',
+                               objmaps=maps)
+
+    def get_temp_sensors(self):
+        maps = []
+        return RelationshipMap(relname='hpilo2temperatures',
+                               compname=self.compname,
+                               modname='ZenPacks.community.HPILO2.HPILO2Temperature',
+                               objmaps=maps)
+
+    def get_power_supplies(self):
+        maps = []
+        return RelationshipMap(relname='hpilo2powersupplies',
+                               compname=self.compname,
+                               modname='ZenPacks.community.HPILO2.hpilo2powersupplies',
+                               objmaps=maps)
+
+    def get_storage_maps(self):
+        maps = []
+        return RelationshipMap(relname='hpilo2physicaldrives',
+                               compname=self.compname,
+                               modname='ZenPacks.community.HPILO2.HPILO2PhysicalDrive',
+                               objmaps=maps)
+
+    def get_nics(self):
+        maps = []
+        return RelationshipMap(relname='hpilo2networkinterface',
+                               compname=self.compname,
+                               modname='ZenPacks.community.HPILO2.HPILO2NetworkInterface',
+                               objmaps=maps)
+
+    # - HPILO2Chassis(hpilo2pcidevices)    1:MC    HPILO2PCIDevice
 
     # Formatters
     def standardize(self, value):

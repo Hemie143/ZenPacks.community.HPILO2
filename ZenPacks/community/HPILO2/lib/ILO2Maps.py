@@ -29,6 +29,27 @@ ARCH_MAP = { 'HPILO2Chassis': {'totalRam': None,
                                  'model': None,
                                  'threadCount': None
                                  },
+             'HPILO2Memory': {'size': None,
+                              'speed': None,
+                              },
+             'HPILO2CoolingFan': {'zone': None,
+                              },
+             'HPILO2Temperature': {'location': None,
+                                   'caution': None,
+                                   'critical': None
+                              },
+             'HPILO2PowerSupply': {'status': None,
+                              },
+             'HPILO2PhysicalDrive': {'enclosure': None,
+                              },
+             'HPILO2LogicalDrive': {
+                              },
+             'HPILO2NetworkInterface': {'port': None,
+                                        'mac': None,
+                              },
+             'HPILO2PCIDevice': {'type': None,
+                                 'width': None,
+                              },
              }
 
 '''

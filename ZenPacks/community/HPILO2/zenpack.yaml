@@ -90,23 +90,85 @@ classes:
       threadCount:
         label: Thread Count
 
+  HPILO2Memory:
+    base: [zenpacklib.Component]
+    label: HP Memory Device
+    properties:
+      size:
+        label: Size
+      speed:
+        label: Speed
+
+  HPILO2CoolingFan:
+    base: [zenpacklib.Component]
+    label: HP Cooling Fan
+    properties:
+      zone:
+        label: Zone
+
+  HPILO2Temperature:
+    base: [zenpacklib.Component]
+    label: HP Temperature
+    properties:
+      location:
+        label: Location
+      caution:
+        label: Caution
+      critical:
+        label: Critical
+
+  HPILO2PowerSupply:
+    base: [zenpacklib.Component]
+    label: HP Power Supply
+    plural_label: HP Power Supplies
+    properties:
+      status:
+        label: Status
+
+  HPILO2PhysicalDrive:
+    base: [zenpacklib.Component]
+    label: HP Physical Drive
+    properties:
+      enclosure:
+        label: Enclosure
+
+  HPILO2LogicalDrive:
+    base: [zenpacklib.Component]
+    label: HP Logical Drive
+
+  HPILO2NetworkInterface:
+    base: [zenpacklib.Component]
+    label: HP Network Interface
+    properties:
+      port:
+        label: Port
+      mac:
+        label: MAC Address
+
+  HPILO2PCIDevice:
+    base: [zenpacklib.Component]
+    label: HP PCI Device
+    properties:
+      type:
+        label: Type
+      width:
+        label: Width
+
 class_relationships:
   - HPILO2Device(hpilo2chassis) 1:MC HPILO2Chassis
   - HPILO2Chassis(hpilo2systemboard) 1:MC HPILO2SystemBoard
   - HPILO2Chassis(hpilo2managementcontroller) 1:MC HPILO2ManagementController
   - HPILO2Chassis(hpilo2processors) 1:MC HPILO2Processor
-
-# - HPChassis(hpcoolingfans) 1:MC HPCoolingFan
-# - HPChassis 1:MC HPPCIDevice
-# - HPChassis(hppowersupplies) 1:MC HPServerPowerSupply
-# - HPChassis(hpmemories) 1:MC HPMemory
-# - HPChassis 1:MC HPTemperature
+  - HPILO2Chassis(hpilo2memories) 1:MC HPILO2Memory
+  - HPILO2Chassis(hpilo2coolingfans) 1:MC HPILO2CoolingFan
+  - HPILO2Chassis(hpilo2temperatures) 1:MC HPILO2Temperature
+  - HPILO2Chassis(hpilo2powersupplies) 1:MC HPILO2PowerSupply
+  - HPILO2Chassis(hpilo2physicaldrives) 1:MC HPILO2PhysicalDrive
+  - HPILO2Chassis(hpilo2logicaldrives) 1:MC HPILO2LogicalDrive
+  - HPILO2Chassis(hpilo2networkinterface) 1:MC HPILO2NetworkInterface
+  - HPILO2Chassis(hpilo2pcidevices) 1:MC HPILO2PCIDevice
 # - HPChassis(hpnetworkinterfacecontrollers) 1:MC HPNetworkInterfaceController
-# - HPChassis(hpnetworkinterface) 1:MC HPNetworkInterface
-# - HPChassis(hplogicaldrives) 1:MC HPLogicalDrive
-# - HPChassis(hpphysicaldrives) 1:MC HPPhysicalDrive
 # - HPChassis 1:MC HPArrayController
-
 
 device_classes:
   /Server/HPILO2:
