@@ -14,6 +14,8 @@ from ZenPacks.community.HPILO2.lib.ILO2ProtocolHandler import ILO2ProtocolHandle
 from ZenPacks.community.HPILO2.lib.ILO2Maps import get_object_map
 from ZenPacks.community.HPILO2.modeler.HPPluginBase import HPPluginBase
 
+from ZenPacks.community.HPILO2.lib.utils import iterparse
+
 def get_cmd(cmd='GET_EMBEDDED_HEALTH', tag='SERVER_INFO'):
     '''return formatted RIBCL command'''
     return '<{} MODE=\"read\"><{}/></{}>'.format(tag, cmd, tag)
@@ -91,6 +93,8 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         self.health_data = result_data.get('GET_EMBEDDED_HEALTH_DATA', {})
         self.glance_data = self.parser.get_merged(self.get_health_data_section('HEALTH_AT_A_GLANCE'))
 
+        log.debug('***HOST_DATA***:{}'.format(self.host_data))
+
         # get some global info we can use throughout
         self.get_product_serial()
         self.get_ilo_info()
@@ -113,15 +117,17 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         maps.append(self.get_processors())
         maps.append(self.get_memory(log))
         maps.append(self.get_fans(log))
-        '''
-        maps.append(self.get_temp_sensors())
-        maps.append(self.get_power_supplies())
-        maps.extend(self.get_storage_maps())
-        maps.append(self.get_nics())
-        '''
+        maps.append(self.get_temp_sensors(log))
+        maps.append(self.get_power_supplies(log))
+        maps.extend(self.get_storage_maps(log))
+        maps.append(self.get_nics(log))
 
         log.info('Maps:{}'.format(maps))
 
+        # TODO: Send clear event when modeling is OK
+        # dedupid: 	alcohol-ilo.in.credoc.be||/Status/Update|4|Problem while executing plugin ilo2.HPILO2Modeler
+        # component: null
+        # eventClass: /Status/Update
         return maps
 
     # Global info
@@ -211,6 +217,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         om.productId = self.product_id
         om.productName = self.product
         om.totalRam = self.total_mem
+        # TODO: error on following
         om.perfId = "HPILO2Chassis"
         self.compname = 'hpilo2chassis/%s' % om.id
         # TODO: enhance relationship name
@@ -270,8 +277,12 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             om.id = prepId(name)
             # model = data.get('NAME', {}).get('VALUE', '')
             # om.title = model.replace('(R)', '').split('@')[0].strip()
+            # TODO: following is creating error (perfId)
             om.perfId = name
             # om.model = model
+            # TODO: Add speed to CPU
+            # TODO: Add hyperthread to CPU
+            # TODO: Add model to CPU
             om.speed = self.standardize(self.get_field_value(item, 'Speed'))
             tech = self.get_field_value(item, 'Execution Technology')
             try:
@@ -292,7 +303,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         """HPProcessor"""
         maps = []
         for item in self.get_host_data_records('Memory Device'):
-            log.info('MEM item:{}'.format(item))
+            # log.debug('MEM item:{}'.format(item))
             ob_map = get_object_map('HPILO2Memory')
             om = ObjectMap(ob_map)
             name = self.get_field_value(item, 'Label')
@@ -303,7 +314,6 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             size = self.get_field_value(item, 'Size')
             if not size or size == 'not installed':
                 continue
-            log.info('Size: {}'.format(size))
             om.size = self.standardize(size)
             om.speed = self.standardize((self.get_field_value(item, 'Speed')))
             maps.append(om)
@@ -315,7 +325,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
     def get_fans(self, log):
         maps = []
         for item in self.get_health_data_section('FANS'):
-            log.info('Fan: {}'.format(item))
+            # log.debug('Fan: {}'.format(item))
             data = self.parser.get_merged(item.get('FAN', []))
             ob_map = get_object_map('HPILO2CoolingFan')
             om = ObjectMap(ob_map)
@@ -331,28 +341,97 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                                modname='ZenPacks.community.HPILO2.HPILO2CoolingFan',
                                objmaps=maps)
 
-    def get_temp_sensors(self):
+    def get_temp_sensors(self, log):
         maps = []
+        for item in self.get_health_data_section('TEMPERATURE'):
+            # log.debug('Temperature: {}'.format(item))
+            data = self.parser.get_merged(item.get('TEMP', []))
+            ob_map = get_object_map('HPILO2Temperature')
+            om = ObjectMap(ob_map)
+            name = data.get('LABEL', {}).get('VALUE')
+            if not name:
+                continue
+            om.id = prepId(name)
+            om.title = name
+            om.location = data.get('LOCATION', {}).get('VALUE')
+            om.caution = data.get('CAUTION', {}).get('VALUE')
+            om.critical = data.get('CRITICAL', {}).get('VALUE')
+            maps.append(om)
         return RelationshipMap(relname='hpilo2temperatures',
                                compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2Temperature',
                                objmaps=maps)
 
-    def get_power_supplies(self):
+    def get_power_supplies(self, log):
         maps = []
+        for item in self.get_health_data_section('POWER_SUPPLIES'):
+            # log.debug('Power supply: {}'.format(item))
+            data = self.parser.get_merged(item.get('SUPPLY', []))
+            ob_map = get_object_map('HPILO2PowerSupply')
+            om = ObjectMap(ob_map)
+            name = data.get('LABEL', {}).get('VALUE')
+            if not name:
+                continue
+            om.id = prepId(name)
+            om.title = name
+            maps.append(om)
         return RelationshipMap(relname='hpilo2powersupplies',
                                compname=self.compname,
-                               modname='ZenPacks.community.HPILO2.hpilo2powersupplies',
+                               modname='ZenPacks.community.HPILO2.HPILO2PowerSupply',
                                objmaps=maps)
 
-    def get_storage_maps(self):
+    def get_storage_maps(self, log):
         maps = []
+        drive_mappings = {
+            'DRIVE': ('bayIndex', 'BAY'),
+            'PRODUCT': ('productId', 'ID'),
+            'DRIVE_STATUS': ('driveStatus', 'VALUE'),
+        }
+        for backplane in self.get_health_data_section('DRIVES'):
+            # log.debug('Drives: {}'.format(backplane))
+            backplane = backplane.get('BACKPLANE', [])
+            ob_map = get_object_map('HPILO2PhysicalDrive')
+            om = ObjectMap(ob_map)
+
+            '''2017-11-06 14:14:16,853 INFO zen.ZenModeler: Drives: 
+                {'BACKPLANE': [{'FIRMWARE': {'VERSION': '1.16'}}, {'ENCLOSURE': {'ADDR': '224'}}, 
+                        {'DRIVE': {'BAY': '1'}}, {'PRODUCT': {'ID': 'GJ0250EAGSQ    '}}, {'DRIVE_STATUS': {'VALUE': 'Ok'}}, {'UID': {'LED': 'Off'}}, 
+                        {'DRIVE': {'BAY': '2'}}, {'PRODUCT': {'ID': 'GJ0250EAGSQ    '}}, {'DRIVE_STATUS': {'VALUE': 'Ok'}}, {'UID': {'LED': 'Off'}}, 
+                        {'DRIVE': {'BAY': '3'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}, 
+                        {'DRIVE': {'BAY': '4'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}
+                        ]}
+            '''
+
+            for data in backplane:
+                log.debug('storage data: {}'.format(data))
+                key = data.keys()[0]
+                log.debug('storage key: {}'.format(key))
+                if key in drive_mappings.keys():
+                    attr_name, tag = drive_mappings[key]
+                    setattr(om, attr_name, data[key].get(tag, ''))
+                if key == 'UID': # take into account 'not installed'
+                    om.productId = om.productId.strip()
+                    om.id = prepId('BAY {}'.format(om.bayIndex))
+                    om.title = 'BAY {}'.format(om.bayIndex)
+                    maps.append(om)
+                    om = ObjectMap(ob_map)
+
+
+            ''' 
+            [{'FIRMWARE': {'VERSION': '1.16'}}, 
+                {'ENCLOSURE': {'ADDR': '226'}}, 
+                {'DRIVE': {'BAY': '5'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}, 
+                {'DRIVE': {'BAY': '6'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}, 
+                {'DRIVE': {'BAY': '7'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}, 
+                {'DRIVE': {'BAY': '8'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}]
+            '''
+
         return RelationshipMap(relname='hpilo2physicaldrives',
                                compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2PhysicalDrive',
                                objmaps=maps)
 
-    def get_nics(self):
+    def get_nics(self, log):
         maps = []
         return RelationshipMap(relname='hpilo2networkinterface',
                                compname=self.compname,

@@ -131,6 +131,12 @@ classes:
     properties:
       enclosure:
         label: Enclosure
+      bayIndex:
+        label: Bay Index
+      productId:
+        label: Product ID
+      driveStatus:
+        label: Status
 
   HPILO2LogicalDrive:
     base: [zenpacklib.Component]

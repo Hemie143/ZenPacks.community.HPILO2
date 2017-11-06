@@ -13,6 +13,7 @@ import logging
 log = logging.getLogger('zen.ILO2XMLParser')
 
 
+# TODO: there should be no need to use a class, a module library with functions should be OK
 class ILO2XMLParser(object):
     '''Parser for ILO2 XML output'''
 
