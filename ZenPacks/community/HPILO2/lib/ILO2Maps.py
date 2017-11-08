@@ -7,6 +7,7 @@
 #
 ##############################################################################
 # master dictionary for object maps
+# TODO: Remove this ObjectMap mapping, probably not required
 ARCH_MAP = { 'HPILO2Chassis': {'totalRam': None,
                                'enclosure': None,
                                'productId': None,
@@ -40,7 +41,14 @@ ARCH_MAP = { 'HPILO2Chassis': {'totalRam': None,
                               },
              'HPILO2PowerSupply': {'status': None,
                               },
+             'HPILO2Enclosure': {'firmware': None,
+                                 'enclosure_addr': None
+                              },
              'HPILO2PhysicalDrive': {'enclosure': None,
+                                     'bayIndex': None,
+                                     'productId': None,
+                                     'driveStatus': None,
+                                     'uid_led': None
                               },
              'HPILO2LogicalDrive': {
                               },
