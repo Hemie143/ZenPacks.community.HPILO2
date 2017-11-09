@@ -124,7 +124,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         maps.append(self.get_power_supplies(log))
         # test2 = self.get_storage_maps(log)
         # log.info('test2: {}'.format(test2))
-        maps.append(self.get_storage_maps(log))
+        maps.extend(self.get_storage_maps(log))
         maps.append(self.get_nics(log))
 
         log.info('Maps:{}'.format(maps))
@@ -386,20 +386,21 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                                objmaps=maps)
 
     def get_storage_maps(self, log):
+        enclosure_mappings = {
+            'ENCLOSURE': ('enclosure_addr', 'ADDR'),
+            'FIRMWARE': ('firmware', 'VERSION'),
+        }
         drive_mappings = {
             'DRIVE': ('bayIndex', 'BAY'),
-            'PRODUCT': ('productId', 'ID'),
             'DRIVE_STATUS': ('driveStatus', 'VALUE'),
+            'PRODUCT': ('productId', 'ID'),
             'UID': {'uid_led', 'LED'},
-        }
-        enclosure_mappings = {
-            'FIRMWARE': ('firmware', 'VERSION'),
-            'ENCLOSURE': ('enclosure_addr', 'ADDR'),
         }
 
         rm = []
         pdrive_maps = []
         enclosure_maps = []
+        rm_pdrive = []
         for backplane in self.get_health_data_section('DRIVES'):
             # log.debug('Drives: {}'.format(backplane))
             backplane = backplane.get('BACKPLANE', [])
@@ -417,28 +418,35 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                         ]}
             '''
 
+            compname = ''
             for data in backplane:
                 log.debug('storage data: {}'.format(data))
                 key = data.keys()[0]
                 log.debug('storage key: {}'.format(key))
-                # TODO: Enhance the parsing
+                # TODO: Enhance the parsing ??
                 if key in enclosure_mappings.keys():
-                    attr_name, tag = drive_mappings[key]
+                    attr_name, tag = enclosure_mappings[key]
                     setattr(om_enclosure, attr_name, data[key].get(tag, ''))
                     if key == 'ENCLOSURE':
                         om_enclosure.id = prepId('Enclosure {}'.format(om_enclosure.enclosure_addr))
                         om_enclosure.title = 'Enclosure {}'.format(om_enclosure.enclosure_addr)
                         enclosure_maps.append(om_enclosure)
+                        compname = 'hpilo2enclosures/{}'.format(om_enclosure.id)
                 elif key in drive_mappings.keys():
                     attr_name, tag = drive_mappings[key]
                     setattr(om_pdrive, attr_name, data[key].get(tag, ''))
                     if key == 'UID':    # take into account 'not installed'
-                        om_pdrive.productId = om.productId.strip()
-                        om_pdrive.id = prepId('Bay {}'.format(om.bayIndex))
-                        om_pdrive.title = 'Bay {}'.format(om.bayIndex)
+                        om_pdrive.productId = om_pdrive.productId.strip()
+                        om_pdrive.id = prepId('Bay {}'.format(om_pdrive.bayIndex))
+                        om_pdrive.title = 'Bay {}'.format(om_pdrive.bayIndex)
                         pdrive_maps.append(om_pdrive)
                         ob_map = get_object_map('HPILO2PhysicalDrive')
                         om_pdrive = ObjectMap(ob_map)
+            log.info('compname: {}'.format(compname))
+            rm_pdrive.append(RelationshipMap(relname='hpilo2physicaldrives',
+                               compname=compname,
+                               modname='ZenPacks.community.HPILO2.HPILO2PhysicalDrive',
+                               objmaps=pdrive_maps))
 
 
 
@@ -451,11 +459,13 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                 {'DRIVE': {'BAY': '8'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}]
             '''
 
-        rm_enclosure = RelationshipMap(relname='hpilo2enclosures',
+        rm.append(RelationshipMap(relname='hpilo2enclosures',
                                compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2Enclosure',
-                               objmaps=pdrive_maps)
+                               objmaps=enclosure_maps))
+        #rm.extend(rm_pdrive)
 
+        '''
         rm_pdrive = RelationshipMap(relname='hpilo2physicaldrives',
                                compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2PhysicalDrive',
@@ -463,6 +473,9 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
 
         rm.append(rm_enclosure)
         rm.append(rm_pdrive)
+        '''
+        log.info('rm_pdrive: {}'.format(rm_pdrive))
+        log.info('storage rm: {}'.format(rm))
         return rm
 
     def get_nics(self, log):
