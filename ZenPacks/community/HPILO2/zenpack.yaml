@@ -181,7 +181,8 @@ class_relationships:
   - HPILO2Chassis(hpilo2temperatures) 1:MC HPILO2Temperature
   - HPILO2Chassis(hpilo2powersupplies) 1:MC HPILO2PowerSupply
   - HPILO2Chassis(hpilo2enclosures) 1:MC HPILO2Enclosure
-  - HPILO2Enclosure(hpilo2physicaldrives) 1:MC HPILO2PhysicalDrive
+#  - HPILO2Enclosure(hpilo2physicaldrives) 1:MC HPILO2PhysicalDrive
+  - HPILO2Chassis(hpilo2physicaldrives) 1:MC HPILO2PhysicalDrive
   - HPILO2Enclosure(hpilo2logicaldrives) 1:MC HPILO2LogicalDrive
   - HPILO2Chassis(hpilo2networkinterface) 1:MC HPILO2NetworkInterface
   - HPILO2Chassis(hpilo2pcidevices) 1:MC HPILO2PCIDevice

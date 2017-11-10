@@ -112,20 +112,15 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
 
         maps.append(self.get_device_map())
         maps.append(self.get_chassis_maps())
-        maps.append(self.get_sys_board())
-        maps.append(self.get_mgmt_ctrl())
-        maps.append(self.get_processors())
-        maps.append(self.get_memory(log))
-        maps.append(self.get_fans(log))
-        maps.append(self.get_temp_sensors(log))
-        # test1 = self.get_power_supplies(log)
-        # log.info('test1: {}'.format(test1))
-        # maps.append(test1)
-        maps.append(self.get_power_supplies(log))
-        # test2 = self.get_storage_maps(log)
-        # log.info('test2: {}'.format(test2))
+        # maps.append(self.get_sys_board())
+        # maps.append(self.get_mgmt_ctrl())
+        # maps.append(self.get_processors())
+        # maps.append(self.get_memory(log))
+        # maps.append(self.get_fans(log))
+        # maps.append(self.get_temp_sensors(log))
+        # maps.append(self.get_power_supplies(log))
         maps.extend(self.get_storage_maps(log))
-        maps.append(self.get_nics(log))
+        # maps.append(self.get_nics(log))
 
         log.info('Maps:{}'.format(maps))
 
@@ -444,7 +439,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                         om_pdrive = ObjectMap(ob_map)
             log.info('compname: {}'.format(compname))
             rm_pdrive.append(RelationshipMap(relname='hpilo2physicaldrives',
-                               compname=compname,
+                               compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2PhysicalDrive',
                                objmaps=pdrive_maps))
 
@@ -463,7 +458,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                                compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2Enclosure',
                                objmaps=enclosure_maps))
-        #rm.extend(rm_pdrive)
+        rm.extend(rm_pdrive)
 
         '''
         rm_pdrive = RelationshipMap(relname='hpilo2physicaldrives',
