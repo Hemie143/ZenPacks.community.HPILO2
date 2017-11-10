@@ -112,17 +112,15 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
 
         maps.append(self.get_device_map())
         maps.append(self.get_chassis_maps())
-        # maps.append(self.get_sys_board())
-        # maps.append(self.get_mgmt_ctrl())
-        # maps.append(self.get_processors())
-        # maps.append(self.get_memory(log))
-        # maps.append(self.get_fans(log))
-        # maps.append(self.get_temp_sensors(log))
-        # maps.append(self.get_power_supplies(log))
+        maps.append(self.get_sys_board())
+        maps.append(self.get_mgmt_ctrl())
+        maps.append(self.get_processors())
+        maps.append(self.get_memory(log))
+        maps.append(self.get_fans(log))
+        maps.append(self.get_temp_sensors(log))
+        maps.append(self.get_power_supplies(log))
         maps.extend(self.get_storage_maps(log))
-        # maps.append(self.get_nics(log))
-
-        log.info('Maps:{}'.format(maps))
+        maps.append(self.get_nics(log))
 
         # TODO: Send clear event when modeling is OK
         # dedupid: 	alcohol-ilo.in.credoc.be||/Status/Update|4|Problem while executing plugin ilo2.HPILO2Modeler
@@ -391,33 +389,20 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             'PRODUCT': ('productId', 'ID'),
             'UID': {'uid_led', 'LED'},
         }
-
         rm = []
-        pdrive_maps = []
         enclosure_maps = []
         rm_pdrive = []
         for backplane in self.get_health_data_section('DRIVES'):
-            # log.debug('Drives: {}'.format(backplane))
             backplane = backplane.get('BACKPLANE', [])
             ob_map = get_object_map('HPILO2Enclosure')
             om_enclosure = ObjectMap(ob_map)
             ob_map = get_object_map('HPILO2PhysicalDrive')
             om_pdrive = ObjectMap(ob_map)
-
-            '''2017-11-06 14:14:16,853 INFO zen.ZenModeler: Drives: 
-                {'BACKPLANE': [{'FIRMWARE': {'VERSION': '1.16'}}, {'ENCLOSURE': {'ADDR': '224'}}, 
-                        {'DRIVE': {'BAY': '1'}}, {'PRODUCT': {'ID': 'GJ0250EAGSQ    '}}, {'DRIVE_STATUS': {'VALUE': 'Ok'}}, {'UID': {'LED': 'Off'}}, 
-                        {'DRIVE': {'BAY': '2'}}, {'PRODUCT': {'ID': 'GJ0250EAGSQ    '}}, {'DRIVE_STATUS': {'VALUE': 'Ok'}}, {'UID': {'LED': 'Off'}}, 
-                        {'DRIVE': {'BAY': '3'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}, 
-                        {'DRIVE': {'BAY': '4'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}
-                        ]}
-            '''
+            pdrive_maps = []
 
             compname = ''
             for data in backplane:
-                log.debug('storage data: {}'.format(data))
                 key = data.keys()[0]
-                log.debug('storage key: {}'.format(key))
                 # TODO: Enhance the parsing ??
                 if key in enclosure_mappings.keys():
                     attr_name, tag = enclosure_mappings[key]
@@ -426,51 +411,26 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                         om_enclosure.id = prepId('Enclosure {}'.format(om_enclosure.enclosure_addr))
                         om_enclosure.title = 'Enclosure {}'.format(om_enclosure.enclosure_addr)
                         enclosure_maps.append(om_enclosure)
-                        compname = 'hpilo2enclosures/{}'.format(om_enclosure.id)
+                        compname = '{}/hpilo2enclosures/{}'.format(self.compname, om_enclosure.id)
                 elif key in drive_mappings.keys():
                     attr_name, tag = drive_mappings[key]
                     setattr(om_pdrive, attr_name, data[key].get(tag, ''))
-                    if key == 'UID':    # take into account 'not installed'
+                    if key == 'UID' and om_pdrive.driveStatus != 'Not Installed':
                         om_pdrive.productId = om_pdrive.productId.strip()
                         om_pdrive.id = prepId('Bay {}'.format(om_pdrive.bayIndex))
                         om_pdrive.title = 'Bay {}'.format(om_pdrive.bayIndex)
                         pdrive_maps.append(om_pdrive)
                         ob_map = get_object_map('HPILO2PhysicalDrive')
                         om_pdrive = ObjectMap(ob_map)
-            log.info('compname: {}'.format(compname))
             rm_pdrive.append(RelationshipMap(relname='hpilo2physicaldrives',
-                               compname=self.compname,
+                               compname=compname,
                                modname='ZenPacks.community.HPILO2.HPILO2PhysicalDrive',
                                objmaps=pdrive_maps))
-
-
-
-            ''' 
-            [{'FIRMWARE': {'VERSION': '1.16'}}, 
-                {'ENCLOSURE': {'ADDR': '226'}}, 
-                {'DRIVE': {'BAY': '5'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}, 
-                {'DRIVE': {'BAY': '6'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}, 
-                {'DRIVE': {'BAY': '7'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}, 
-                {'DRIVE': {'BAY': '8'}}, {'PRODUCT': {'ID': 'N/A'}}, {'DRIVE_STATUS': {'VALUE': 'Not Installed'}}, {'UID': {'LED': 'Off'}}]
-            '''
-
         rm.append(RelationshipMap(relname='hpilo2enclosures',
                                compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2Enclosure',
                                objmaps=enclosure_maps))
         rm.extend(rm_pdrive)
-
-        '''
-        rm_pdrive = RelationshipMap(relname='hpilo2physicaldrives',
-                               compname=self.compname,
-                               modname='ZenPacks.community.HPILO2.HPILO2PhysicalDrive',
-                               objmaps=pdrive_maps)
-
-        rm.append(rm_enclosure)
-        rm.append(rm_pdrive)
-        '''
-        log.info('rm_pdrive: {}'.format(rm_pdrive))
-        log.info('storage rm: {}'.format(rm))
         return rm
 
     def get_nics(self, log):
