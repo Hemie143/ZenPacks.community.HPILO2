@@ -24,24 +24,33 @@ classes:
     plural_label: HP Chassis
 
     properties:
+      DEFAULTS:
+        grid_display: false
       enclosure:
         label: Enclosure
+        grid_display: true
       serialNo:
         label: Serial Number
+        grid_display: true
       productName:
         label: Product
+        grid_display: true
       get_cpu_count:
         label: CPU Count
+        grid_display: true
         api_only: true
         api_backendtype: method
       totalRam:
         label: Total RAM
+        grid_display: true
         renderer: Zenoss.render.bytesString
       productId:
         label: Product ID
+        grid_display: true
         grid_display: false
       serverName:
         label: Server Name
+        grid_display: true
         details_display: false
       perfId:
         grid_display: false
@@ -52,12 +61,16 @@ classes:
     plural_label: HP System Boards
 
     properties:
+      DEFAULTS:
+        grid_display: false
       productName:
         label: Product Name
       romVer:
         label: Rom Version
+        grid_display: true
       serialNo:
         label: Serial Number
+        grid_display: true
 
   HPILO2ManagementController:
     base: [zenpacklib.Component]
@@ -79,75 +92,129 @@ classes:
     label: HP Processor
 
     properties:
+      DEFAULTS:
+        grid_display: false
       cacheSizeL1:
         label: L1
       cacheSizeL2:
         label: L2
       cacheSizeL3:
         label: L3
+      model:
+        label: Model
+        grid_display: true
       coreCount:
         label: Cores
+        grid_display: true
       threadCount:
         label: Thread Count
+        grid_display: true
 
   HPILO2Memory:
     base: [zenpacklib.Component]
     label: HP Memory Device
     properties:
+      DEFAULTS:
+        grid_display: false
       size:
         label: Size
+        renderer: Zenoss.render.memory
+        grid_display: true
       speed:
         label: Speed
+        renderer: Zenoss.render.ilo2_memory_frequency
+        grid_display: true
 
   HPILO2CoolingFan:
     base: [zenpacklib.Component]
     label: HP Cooling Fan
     properties:
+      DEFAULTS:
+        grid_display: false
       zone:
         label: Zone
+        grid_display: true
+      speed:
+        label: Speed
+        api_only: true
+        api_backendtype: method
+        grid_display: true
 
   HPILO2Temperature:
     base: [zenpacklib.Component]
     label: HP Temperature
     properties:
+      DEFAULTS:
+        grid_display: false
       location:
         label: Location
+        grid_display: true
+      currentReading:
+        label: Current
+        datapoint: currentReading_currentReading
+        datapoint_default: 0
+        renderer: Zenoss.render.ilo2_temp_celsius
+        grid_display: true
       caution:
         label: Caution
+        renderer: Zenoss.render.ilo2_temp_celsius
+        grid_display: true
       critical:
         label: Critical
+        renderer: Zenoss.render.ilo2_temp_celsius
+        grid_display: true
 
   HPILO2PowerSupply:
     base: [zenpacklib.Component]
     label: HP Power Supply
     plural_label: HP Power Supplies
     properties:
+      DEFAULTS:
+        grid_display: false
       status:
         label: Status
+        api_only: true
+        api_backendtype: method
+        grid_display: true
 
   HPILO2Enclosure:
     base: [zenpacklib.Component]
     label: HP Enclosure
     properties:
+      DEFAULTS:
+        grid_display: false
       firmware:
         label: Firmware
+        grid_display: true
       enclosure_addr:
         label: Enclosure Address
+        grid_display: true
 
   HPILO2PhysicalDrive:
     base: [zenpacklib.Component]
     label: HP Physical Drive
     properties:
+      DEFAULTS:
+        grid_display: false
       enclosure:
         label: Enclosure
+        grid_display: true
       bayIndex:
         label: Bay Index
+        grid_display: true
       productId:
         label: Product ID
+        grid_display: true
       driveStatus:
         label: Status
+        api_only: true
+        api_backendtype: method
+        grid_display: true
       uid_led:
         label: LED
+        api_only: true
+        api_backendtype: method
+        grid_display: true
 
   HPILO2LogicalDrive:
     base: [zenpacklib.Component]
@@ -157,22 +224,31 @@ classes:
     base: [zenpacklib.Component]
     label: HP Network Interface
     properties:
+      DEFAULTS:
+        grid_display: false
       port:
         label: Port
+        grid_display: true
       mac:
         label: MAC Address
         content_width: 120
+        grid_display: true
       type:
         label: Type
+        grid_display: true
 
   HPILO2PCIDevice:
     base: [zenpacklib.Component]
     label: HP PCI Device
     properties:
+      DEFAULTS:
+        grid_display: false
       type:
         label: Type
+        grid_display: true
       width:
         label: Width
+        grid_display: true
 
 class_relationships:
   - HPILO2Device(hpilo2chassis) 1:MC HPILO2Chassis

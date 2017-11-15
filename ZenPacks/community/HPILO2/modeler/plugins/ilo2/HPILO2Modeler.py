@@ -1,5 +1,7 @@
 
 # stdlib imports
+import re
+
 # Twisted imports
 from twisted.internet.defer import DeferredSemaphore, DeferredList, inlineCallbacks, returnValue
 
@@ -108,11 +110,11 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             log.warning('Command "{}" returned no output'.format('GET_EMBEDDED_HEALTH_DATA'))
             return
 
-        maps.append(self.get_device_map())
-        maps.append(self.get_chassis_maps())
-        maps.append(self.get_sys_board())
-        maps.append(self.get_mgmt_ctrl())
-        maps.append(self.get_processors())
+        maps.append(self.get_device_map(log))
+        maps.append(self.get_chassis_maps(log))
+        maps.append(self.get_sys_board(log))
+        maps.append(self.get_mgmt_ctrl(log))
+        maps.append(self.get_processors(log))
         maps.append(self.get_memory(log))
         maps.append(self.get_fans(log))
         maps.append(self.get_temp_sensors(log))
@@ -203,7 +205,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         return
 
     # Components modelers
-    def get_device_map(self):
+    def get_device_map(self, log):
         '''Device Map'''
         om = self.objectMap()
         om.setHWProductKey = MultiArgs(self.product, 'HPILO2')
@@ -212,7 +214,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         om.snmpDescr = self.product_id
         return om
 
-    def get_chassis_maps(self):
+    def get_chassis_maps(self, log):
         """HPILO2Chassis"""
         ob_map = get_object_map('HPILO2Chassis')
         om = ObjectMap(ob_map)
@@ -233,7 +235,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                                modname='ZenPacks.community.HPILO2.HPILO2Chassis',
                                objmaps=[om])
 
-    def get_sys_board(self):
+    def get_sys_board(self, log):
         """HPILO2SystemBoard"""
         ob_map = get_object_map('HPILO2SystemBoard')
         om = ObjectMap(ob_map)
@@ -249,7 +251,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                                modname='ZenPacks.community.HPILO2.HPILO2SystemBoard',
                                objmaps=[om])
 
-    def get_mgmt_ctrl(self):
+    def get_mgmt_ctrl(self, log):
         """Management Controller"""
         ob_map = get_object_map('HPILO2ManagementController')
         om = ObjectMap(ob_map)
@@ -266,17 +268,10 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                                modname='ZenPacks.community.HPILO2.HPILO2ManagementController',
                                objmaps=[om])
 
-    def get_processors(self):
+    def get_processors(self, log):
         """HPProcessor"""
         maps = []
         for item in self.get_host_data_records('Processor Information'):
-            '''Processor item [{'FIELD': {'NAME': 'Subject', 'VALUE': 'Processor Information'}},
-                {'FIELD': {'NAME': 'Label', 'VALUE': 'Proc 1'}}, 
-                {'FIELD': {'NAME': 'Speed', 'VALUE': '2400 MHz'}}, 
-                {'FIELD': {'NAME': 'Execution Technology', 'VALUE': '4 of 4 cores; 8 threads'}}, 
-                {'FIELD': {'NAME': 'Memory Technology', 'VALUE': '64-bit extensions'}}, 
-                {'FIELD': {'NAME': 'Family', 'VALUE': '179'}}]
-            '''
             ob_map = get_object_map('HPILO2Processor')
             om = ObjectMap(ob_map)
             name = self.get_field_value(item, 'Label')
@@ -294,11 +289,15 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             om.speed = self.standardize(self.get_field_value(item, 'Speed'))
             tech = self.get_field_value(item, 'Execution Technology')
             try:
-                om.coreCount = re.findall(r'(\d)/\d cores', tech)[0]
+                log.info('CPU trying to parse cores on {}'.format(tech))
+                om.coreCount = re.search(r'(\d)+ of \d+ cores', tech).group(1)
+                log.info('CPU cores: {}'.format(om.coreCount))
             except:
                 pass
             try:
-                om.threadCount = re.findall(r'(\d) threads', tech)[0]
+                log.info('CPU trying to parse threads on {}'.format(tech))
+                om.threadCount = re.search(r'(\d)+ threads', tech).group(1)
+                log.info('CPU threads: {}'.format(om.threadCount))
             except:
                 pass
             maps.append(om)
