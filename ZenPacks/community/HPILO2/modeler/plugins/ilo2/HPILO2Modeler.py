@@ -93,8 +93,6 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         self.health_data = result_data.get('GET_EMBEDDED_HEALTH_DATA', {})
         self.glance_data = self.parser.get_merged(self.get_health_data_section('HEALTH_AT_A_GLANCE'))
 
-        # log.debug('***HOST_DATA***:{}'.format(self.host_data))
-
         # get some global info we can use throughout
         self.get_product_serial()
         self.get_ilo_info()
@@ -121,6 +119,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         maps.append(self.get_power_supplies(log))
         maps.extend(self.get_storage_maps(log))
         maps.append(self.get_nics(log))
+        maps.append(self.get_pci_devices(log))
 
         # TODO: Send clear event when modeling is OK
         # dedupid: 	alcohol-ilo.in.credoc.be||/Status/Update|4|Problem while executing plugin ilo2.HPILO2Modeler
@@ -169,13 +168,22 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
 
     def find_host_data_item(self, key, tagk='NAME', tagv='VALUE'):
         for item in self.host_data:
-            # print('host_data_item: {}'.format(item))
             record = item.get('SMBIOS_RECORD', [])
             for i in record:
-                field = i.get('FIELD')
-                if field.get(tagk) == key:
+                field = i.get('FIELD', '')
+                if field and field.get(tagk) == key:
                     return field.get(tagv)
         return 'Unknown'
+
+    def get_host_data_record_by_type(self, item_type, log):
+        result = []
+        for item in self.host_data:
+            record = item.get('SMBIOS_RECORD', [])
+            for i in record:
+                rec_type = i.get('TYPE', '')
+                if rec_type == str(item_type):
+                    result.append(record)
+        return result
 
     def get_host_data_records(self, key):
         result = []
@@ -183,12 +191,13 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             record = item.get('SMBIOS_RECORD', [])
             for i in record:
                 field = i.get('FIELD')
-                if field.get('NAME') == 'Subject' and field.get('VALUE') == key:
+                if field and field.get('NAME') == 'Subject' and field.get('VALUE') == key:
                     result.append(record)
         return result
 
     def get_field_value(self, fields, name):
         for field in fields:
+            # TODO: get_field_value probably bugged if no FIELD entry
             if field['FIELD']['NAME'] == name:
                 return field['FIELD']['VALUE']
         return
@@ -217,6 +226,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         om.totalRam = self.total_mem
         # TODO: error on following
         om.perfId = "HPILO2Chassis"
+        # TODO: refactor to more explicit name ? chassis_compname ?
         self.compname = 'hpilo2chassis/%s' % om.id
         # TODO: enhance relationship name
         return RelationshipMap(relname='hpilo2chassis',
@@ -434,13 +444,64 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         return rm
 
     def get_nics(self, log):
+        nic_types = {
+            209: 'NIC',
+            221: 'iSCSI',
+        }
+        nic_mappings = {
+            'MAC': 'mac',
+            'Port': 'port',
+        }
+        nicCount = 0
         maps = []
+        ob_map = get_object_map('HPILO2NetworkInterface')
+        om = ObjectMap(ob_map)
+        for t in nic_types.keys():
+            records = self.get_host_data_record_by_type(t, log)
+            for record in records:
+                for data in record:
+                    field = data.get('FIELD', '')
+                    if field:
+                        name = field.get('NAME', '')
+                        if name and name in nic_mappings.keys():
+                            attr_name = nic_mappings[name]
+                            setattr(om, attr_name, field.get('VALUE', ''))
+                        if name == 'MAC':
+                            nicCount += 1
+                            om.title = 'NIC {}'.format(nicCount)
+                            om.id = prepId(om.title)
+                            if om.port == 'iLO':
+                                om.type = 'ILO'
+                            else:
+                                om.port = 'Port {}'.format(om.port)
+                                om.type = nic_types[t]
+                            maps.append(om)
+                            ob_map = get_object_map('HPILO2NetworkInterface')
+                            om = ObjectMap(ob_map)
         return RelationshipMap(relname='hpilo2networkinterface',
                                compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2NetworkInterface',
                                objmaps=maps)
 
-    # - HPILO2Chassis(hpilo2pcidevices)    1:MC    HPILO2PCIDevice
+
+    def get_pci_devices(self, log):
+        maps = []
+        for item in self.get_host_data_records('System Slots'):
+            # log.debug('MEM item:{}'.format(item))
+            ob_map = get_object_map('HPILO2PCIDevice')
+            om = ObjectMap(ob_map)
+            name = self.get_field_value(item, 'Label')
+            if not name or name == '':
+                continue
+            om.id = prepId(name)
+            om.type = self.get_field_value(item, 'Type')
+            om.width = self.get_field_value(item, 'Width')
+            maps.append(om)
+        return RelationshipMap(relname='hpilo2pcidevices',
+                               compname=self.compname,
+                               modname='ZenPacks.community.HPILO2.HPILO2PCIDevice',
+                               objmaps=maps)
+
 
     # Formatters
     def standardize(self, value):

@@ -161,6 +161,9 @@ classes:
         label: Port
       mac:
         label: MAC Address
+        content_width: 120
+      type:
+        label: Type
 
   HPILO2PCIDevice:
     base: [zenpacklib.Component]

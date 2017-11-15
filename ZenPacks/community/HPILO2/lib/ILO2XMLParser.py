@@ -114,6 +114,7 @@ class ILO2XMLParser(object):
                 results.append(info)
         else:
             log.error('Error parsing XML document')
+        log.info('parse results: {}'.format(results))
         return self.normalize(results)
 
     def find_items_by_tag(self, data, tag):
@@ -131,17 +132,20 @@ class ILO2XMLParser(object):
                 items += self.find_items_by_tag(d, tag)
         return items
 
-    def get_info(self, element):
-        '''return combo list/dictionary representing element'''
+    def get_info(self, element, skipped=None):
+        '''return combo list/dictionary representing element
+        '''
         info = []
         for x in element.iterchildren('*'):
             if self.to_skip(x):
-                ob = self.get_info(x)
+                ob = self.get_info(x, x.attrib)
             else:
                 ob = {x.tag: dict(x.attrib)}
             if isinstance(ob.get(x.tag), list) and len(ob.get(x.tag)) == 0:
                 continue
             info.append(ob)
+        if skipped:
+            info.append(skipped)
         return {element.tag: info}
 
     def get_useful_data(self, parsed):
