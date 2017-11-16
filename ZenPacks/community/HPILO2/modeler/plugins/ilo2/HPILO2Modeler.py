@@ -289,15 +289,11 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             om.speed = self.standardize(self.get_field_value(item, 'Speed'))
             tech = self.get_field_value(item, 'Execution Technology')
             try:
-                log.info('CPU trying to parse cores on {}'.format(tech))
                 om.coreCount = re.search(r'(\d)+ of \d+ cores', tech).group(1)
-                log.info('CPU cores: {}'.format(om.coreCount))
             except:
                 pass
             try:
-                log.info('CPU trying to parse threads on {}'.format(tech))
                 om.threadCount = re.search(r'(\d)+ threads', tech).group(1)
-                log.info('CPU threads: {}'.format(om.threadCount))
             except:
                 pass
             maps.append(om)
@@ -322,7 +318,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             if not size or size == 'not installed':
                 continue
             om.size = self.standardize(size)
-            om.speed = self.standardize((self.get_field_value(item, 'Speed')))
+            om.speed = self.get_field_value(item, 'Speed').replace('MHz', '').strip()
             maps.append(om)
         return RelationshipMap(relname='hpilo2memories',
                                compname=self.compname,

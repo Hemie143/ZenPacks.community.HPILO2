@@ -13,6 +13,23 @@ zProperties:
   zILO2Port:
     default: 443
 
+class_relationships:
+  - HPILO2Device(hpilo2chassis) 1:MC HPILO2Chassis
+  - HPILO2Chassis(hpilo2systemboard) 1:MC HPILO2SystemBoard
+  - HPILO2Chassis(hpilo2managementcontroller) 1:MC HPILO2ManagementController
+  - HPILO2Chassis(hpilo2processors) 1:MC HPILO2Processor
+  - HPILO2Chassis(hpilo2memories) 1:MC HPILO2Memory
+  - HPILO2Chassis(hpilo2coolingfans) 1:MC HPILO2CoolingFan
+  - HPILO2Chassis(hpilo2temperatures) 1:MC HPILO2Temperature
+  - HPILO2Chassis(hpilo2powersupplies) 1:MC HPILO2PowerSupply
+  - HPILO2Chassis(hpilo2enclosures) 1:MC HPILO2Enclosure
+  - HPILO2Enclosure(hpilo2physicaldrives) 1:MC HPILO2PhysicalDrive
+  - HPILO2Enclosure(hpilo2logicaldrives) 1:MC HPILO2LogicalDrive
+  - HPILO2Chassis(hpilo2networkinterface) 1:MC HPILO2NetworkInterface
+  - HPILO2Chassis(hpilo2pcidevices) 1:MC HPILO2PCIDevice
+# - HPChassis(hpnetworkinterfacecontrollers) 1:MC HPNetworkInterfaceController
+# - HPChassis 1:MC HPArrayController
+
 classes:
   HPILO2Device:
     base: [zenpacklib.Device]
@@ -22,9 +39,9 @@ classes:
     base: [zenpacklib.Component]
     label: HP Chassis
     plural_label: HP Chassis
-
     properties:
       DEFAULTS:
+        details_display: false
         grid_display: false
       enclosure:
         label: Enclosure
@@ -46,14 +63,25 @@ classes:
         renderer: Zenoss.render.bytesString
       productId:
         label: Product ID
-        grid_display: true
-        grid_display: false
       serverName:
         label: Server Name
         grid_display: true
         details_display: false
       perfId:
         grid_display: false
+    relationships:
+      DEFAULTS:
+        grid_display: false
+      hpilo2processors: {}
+      hpilo2coolingfans: {}
+      hpilo2managementcontroller: {}
+      hpilo2memories: {}
+      hpilo2networkinterface: {}
+      hpilo2pcidevices: {}
+      hpilo2enclosures: {}
+      hpilo2powersupplies: {}
+      hpilo2systemboard: {}
+      hpilo2temperatures: {}
 
   HPILO2SystemBoard:
     base: [zenpacklib.Component]
@@ -94,14 +122,11 @@ classes:
     properties:
       DEFAULTS:
         grid_display: false
-      cacheSizeL1:
-        label: L1
-      cacheSizeL2:
-        label: L2
-      cacheSizeL3:
-        label: L3
       model:
         label: Model
+        grid_display: true
+      speed:
+        label: Speed
         grid_display: true
       coreCount:
         label: Cores
@@ -109,6 +134,12 @@ classes:
       threadCount:
         label: Thread Count
         grid_display: true
+      cacheSizeL1:
+        label: L1
+      cacheSizeL2:
+        label: L2
+      cacheSizeL3:
+        label: L3
 
   HPILO2Memory:
     base: [zenpacklib.Component]
@@ -167,7 +198,7 @@ classes:
   HPILO2PowerSupply:
     base: [zenpacklib.Component]
     label: HP Power Supply
-    plural_label: HP Power Supplies
+    # plural_label: HP Power Supplies
     properties:
       DEFAULTS:
         grid_display: false
@@ -249,23 +280,6 @@ classes:
       width:
         label: Width
         grid_display: true
-
-class_relationships:
-  - HPILO2Device(hpilo2chassis) 1:MC HPILO2Chassis
-  - HPILO2Chassis(hpilo2systemboard) 1:MC HPILO2SystemBoard
-  - HPILO2Chassis(hpilo2managementcontroller) 1:MC HPILO2ManagementController
-  - HPILO2Chassis(hpilo2processors) 1:MC HPILO2Processor
-  - HPILO2Chassis(hpilo2memories) 1:MC HPILO2Memory
-  - HPILO2Chassis(hpilo2coolingfans) 1:MC HPILO2CoolingFan
-  - HPILO2Chassis(hpilo2temperatures) 1:MC HPILO2Temperature
-  - HPILO2Chassis(hpilo2powersupplies) 1:MC HPILO2PowerSupply
-  - HPILO2Chassis(hpilo2enclosures) 1:MC HPILO2Enclosure
-  - HPILO2Enclosure(hpilo2physicaldrives) 1:MC HPILO2PhysicalDrive
-  - HPILO2Enclosure(hpilo2logicaldrives) 1:MC HPILO2LogicalDrive
-  - HPILO2Chassis(hpilo2networkinterface) 1:MC HPILO2NetworkInterface
-  - HPILO2Chassis(hpilo2pcidevices) 1:MC HPILO2PCIDevice
-# - HPChassis(hpnetworkinterfacecontrollers) 1:MC HPNetworkInterfaceController
-# - HPChassis 1:MC HPArrayController
 
 device_classes:
   /Server/HPILO2:
