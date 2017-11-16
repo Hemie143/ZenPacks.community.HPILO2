@@ -118,7 +118,6 @@ classes:
   HPILO2Processor:
     base: [zenpacklib.Component]
     label: HP Processor
-
     properties:
       DEFAULTS:
         grid_display: false
@@ -198,7 +197,7 @@ classes:
   HPILO2PowerSupply:
     base: [zenpacklib.Component]
     label: HP Power Supply
-    # plural_label: HP Power Supplies
+    plural_label: HP Power Supplies
     properties:
       DEFAULTS:
         grid_display: false
