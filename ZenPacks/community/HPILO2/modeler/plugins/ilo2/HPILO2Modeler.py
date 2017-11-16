@@ -286,7 +286,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             # TODO: Add speed to CPU
             # TODO: Add hyperthread to CPU
             # TODO: Add model to CPU
-            om.speed = self.standardize(self.get_field_value(item, 'Speed'))
+            om.speed = self.get_field_value(item, 'Speed')
             tech = self.get_field_value(item, 'Execution Technology')
             try:
                 om.coreCount = re.search(r'(\d)+ of \d+ cores', tech).group(1)
