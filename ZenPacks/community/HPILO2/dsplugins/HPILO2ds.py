@@ -51,7 +51,7 @@ class HPChassis(PythonDataSourcePlugin):
         log.debug('params is {} \n'.format(params))
         return params
 
-    #@inlineCallbacks
+    @inlineCallbacks
     def collect(self, config):
         ds0 = config.datasources[0]
         log.info('config: {}'.format(ds0))
@@ -73,14 +73,24 @@ class HPChassis(PythonDataSourcePlugin):
 
         data = self.new_data()
 
+        # TODO : loop in datasources ?
+        # TODO : yield result
+        '''
         deferreds = []
         sem = DeferredSemaphore(1)
         for datasource in config.datasources:
+            log.info('datasource: {}'.format(datasource.datasource))
             d = sem.run(client.send_command, get_cmd('GET_EMBEDDED_HEALTH'))
             # results = yield DeferredList(deferreds, consumeErrors=True)
             deferreds.append(d)
+        '''
+        sem = DeferredSemaphore(1)
+        # d = sem.run(client.send_command, get_cmd('GET_EMBEDDED_HEALTH'))
+        data = yield client.send_command(get_cmd('GET_EMBEDDED_HEALTH'))
         # returnValue(data)
-        return DeferredList(deferreds)
+        # return DeferredList(deferreds)
+        #return d
+        returnValue(data)
 
     def onResult(self, result, config):
         """
