@@ -39,6 +39,7 @@ classes:
     base: [zenpacklib.Component]
     label: HP Chassis
     plural_label: HP Chassis
+    monitoring_templates: [HPILO2Chassis]
     properties:
       DEFAULTS:
         details_display: false
@@ -63,6 +64,7 @@ classes:
         renderer: Zenoss.render.bytesString
       productId:
         label: Product ID
+        content_width: 120
       serverName:
         label: Server Name
         grid_display: true
@@ -87,7 +89,6 @@ classes:
     base: [zenpacklib.Component]
     label: HP System Board
     plural_label: HP System Boards
-
     properties:
       DEFAULTS:
         grid_display: false
@@ -99,11 +100,14 @@ classes:
       serialNo:
         label: Serial Number
         grid_display: true
+      uuid:
+        label: UUID
+        grid_display: true
+        content_width: 180
 
   HPILO2ManagementController:
     base: [zenpacklib.Component]
     label: HP Management Controller
-
     properties:
       firmware:
         label: Firmware Version
@@ -288,3 +292,14 @@ device_classes:
       zSnmpMonitorIgnore: True
       zCollectorPlugins:
          - ilo2.HPILO2Modeler
+
+    templates:
+      HPILO2Chassis:
+        datasources:
+          chassis:
+            type: Python
+            plugin_classname: ZenPacks.community.HPILO2.dsplugins.HPILO2ds.HPChassis
+            datapoints:
+              status:
+                rrdtype: GAUGE
+

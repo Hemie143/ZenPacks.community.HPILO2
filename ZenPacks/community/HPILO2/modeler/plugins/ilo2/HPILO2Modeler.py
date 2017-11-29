@@ -26,7 +26,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
     deviceProperties = HPPluginBase.deviceProperties + \
         PythonPlugin.deviceProperties + \
         ('zILO2UserName', 'zILO2Password', 'zILO2UseSSL', 'zILO2Port', 'zCollectorClientTimeout')
-    # version = 3
+
     parser = ILO2XMLParser()
 
     serverDetails = [
@@ -246,6 +246,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                                    self.find_host_data_item('Date'))
         om.serialNo = self.serial
         om.productName = self.product
+        om.uuid = self.find_host_data_item('cUUID')
         return RelationshipMap(relname='hpilo2systemboard',
                                compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2SystemBoard',
@@ -266,7 +267,8 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         return RelationshipMap(relname='hpilo2managementcontroller',
                                compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2ManagementController',
-                               objmaps=[om])
+                               objmaps=[om]
+                               )
 
     def get_processors(self, log):
         """HPProcessor"""
@@ -306,7 +308,6 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         """HPProcessor"""
         maps = []
         for item in self.get_host_data_records('Memory Device'):
-            # log.debug('MEM item:{}'.format(item))
             ob_map = get_object_map('HPILO2Memory')
             om = ObjectMap(ob_map)
             name = self.get_field_value(item, 'Label')
