@@ -298,7 +298,7 @@ device_classes:
         datasources:
           chassis:
             type: Python
-            plugin_classname: ZenPacks.community.HPILO2.dsplugins.HPILO2ds.HPChassis
+            plugin_classname: ZenPacks.community.HPILO2.dsplugins.HPILO2DataSource.HPILO2DataSourcePlugin
             datapoints:
               status:
                 rrdtype: GAUGE

@@ -19,7 +19,7 @@ def get_cmd(cmd='GET_EMBEDDED_HEALTH', tag='SERVER_INFO'):
     return '<{} MODE=\"read\"><{}/></{}>'.format(tag, cmd, tag)
 
 
-class HPChassis(PythonDataSourcePlugin):
+class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
     # List of device attributes you might need to do collection.
 
     proxy_attributes = (
@@ -55,6 +55,9 @@ class HPChassis(PythonDataSourcePlugin):
     def collect(self, config):
         ds0 = config.datasources[0]
         log.info('config: {}'.format(ds0))
+        log.info('config.id: {}'.format(config.id))
+
+
         log.info('zILO2Port: {}'.format(config.datasources[0].zILO2Port))
 
         ip_address = config.manageIp
@@ -73,8 +76,7 @@ class HPChassis(PythonDataSourcePlugin):
 
         data = self.new_data()
 
-        # TODO : loop in datasources ?
-        # TODO : yield result
+        # TODO : cleanup
         '''
         deferreds = []
         sem = DeferredSemaphore(1)
@@ -104,6 +106,7 @@ class HPChassis(PythonDataSourcePlugin):
         return result
 
     def onSuccess(self, result, config):
+
         return result
 
     def onError(self, result, config):
@@ -117,8 +120,8 @@ class HPChassis(PythonDataSourcePlugin):
         log.debug('In OnError - result is %s and config is %s ' % (result, config))
         return {
             'events': [{
-                'summary': 'Error getting Snmp component services data with zenpython: %s' % result,
-                'eventKey': 'PythonSnmpWinServComponent',
+                'summary': 'Error getting HPILO2DataSourcePlugin component services data with zenpython: %s' % result,
+                'eventKey': 'HPILO2DataSourcePlugin',
                 'severity': 4,
             }],
         }
@@ -130,6 +133,6 @@ class HPChassis(PythonDataSourcePlugin):
         You can omit this method if you want the result of either the
         onSuccess or onError method to be used without further processing.
         """
-        log.debug('Starting SnmpRaritanTempSensor onComplete')
+        log.debug('Starting HPILO2DataSourcePlugin onComplete')
         return result
 

@@ -1,2 +1,2 @@
 
-from HPILO2ds import HPChassis
+from HPILO2DataSource import HPILO2DataSourcePlugin
