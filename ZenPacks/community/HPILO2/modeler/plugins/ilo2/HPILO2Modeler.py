@@ -11,7 +11,7 @@ from Products.DataCollector.plugins.DataMaps import MultiArgs
 from Products.DataCollector.plugins.DataMaps import ObjectMap, RelationshipMap
 from Products.ZenUtils.Utils import prepId
 
-from ZenPacks.community.HPILO2.lib.ILO2XMLParser import ILO2XMLParser
+from ZenPacks.community.HPILO2.lib.ILO2XMLParser import parse, get_merged
 from ZenPacks.community.HPILO2.lib.ILO2ProtocolHandler import ILO2ProtocolHandler
 from ZenPacks.community.HPILO2.lib.ILO2Maps import get_object_map
 from ZenPacks.community.HPILO2.modeler.HPPluginBase import HPPluginBase
@@ -27,7 +27,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         PythonPlugin.deviceProperties + \
         ('zILO2UserName', 'zILO2Password', 'zILO2UseSSL', 'zILO2Port', 'zCollectorClientTimeout')
 
-    parser = ILO2XMLParser()
+    # parser = ILO2XMLParser()
 
     serverDetails = [
         get_cmd('GET_SERVER_NAME'),
@@ -82,7 +82,8 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
 
         result_data = {}
         for status, result in results:
-            parsed = self.parser.parse(result)
+            # parsed = self.parser.parse(result)
+            parsed = parse(result)
             result_data.update(parsed)
 
         self.server_name = result_data.get('SERVER_NAME', {}).get('VALUE')
@@ -93,7 +94,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         self.host_data = result_data.get('GET_HOST_DATA', {})
         self.fw_data = result_data.get('GET_FW_VERSION', {})
         self.health_data = result_data.get('GET_EMBEDDED_HEALTH_DATA', {})
-        self.glance_data = self.parser.get_merged(self.get_health_data_section('HEALTH_AT_A_GLANCE'))
+        self.glance_data = get_merged(self.get_health_data_section('HEALTH_AT_A_GLANCE'))
 
         # get some global info we can use throughout
         self.get_product_serial()
@@ -138,14 +139,14 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
     def get_ilo_info(self):
         """find out some global ILO info"""
         for item in self.get_health_data_section('NIC_INFORMATION'):
-            data = self.parser.get_merged(item.get('NIC', []))
+            data = get_merged(item.get('NIC', []))
             # this is probably the ILO
             if len(data) == 0:
                 try:
                     key = item.keys()[0]
                 except:
                     continue
-                data = self.parser.get_merged(item.get(key, []))
+                data = get_merged(item.get(key, []))
             # we'll pull out some global info from this then
             if len(data) > 0:
                 ipaddr = data.get('IP_ADDRESS', {}).get('VALUE')
@@ -330,7 +331,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         maps = []
         for item in self.get_health_data_section('FANS'):
             # log.debug('Fan: {}'.format(item))
-            data = self.parser.get_merged(item.get('FAN', []))
+            data = get_merged(item.get('FAN', []))
             ob_map = get_object_map('HPILO2CoolingFan')
             om = ObjectMap(ob_map)
             name = data.get('LABEL', {}).get('VALUE')
@@ -349,7 +350,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         maps = []
         for item in self.get_health_data_section('TEMPERATURE'):
             # log.debug('Temperature: {}'.format(item))
-            data = self.parser.get_merged(item.get('TEMP', []))
+            data = get_merged(item.get('TEMP', []))
             ob_map = get_object_map('HPILO2Temperature')
             om = ObjectMap(ob_map)
             name = data.get('LABEL', {}).get('VALUE')
@@ -370,7 +371,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         maps = []
         for item in self.get_health_data_section('POWER_SUPPLIES'):
             # log.debug('Power supply: {}'.format(item))
-            data = self.parser.get_merged(item.get('SUPPLY', []))
+            data = get_merged(item.get('SUPPLY', []))
             ob_map = get_object_map('HPILO2PowerSupply')
             om = ObjectMap(ob_map)
             name = data.get('LABEL', {}).get('VALUE')
