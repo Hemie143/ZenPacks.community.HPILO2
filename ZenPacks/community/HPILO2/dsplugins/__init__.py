@@ -1,2 +1,4 @@
 
 from HPILO2DataSource import HPILO2DataSourcePlugin
+from HPILO2DataSource import HPILO2DataSourcePluginPower
+

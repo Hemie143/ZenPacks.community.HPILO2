@@ -162,6 +162,7 @@ classes:
   HPILO2CoolingFan:
     base: [zenpacklib.Component]
     label: HP Cooling Fan
+    monitoring_templates: [HPILO2CoolingFan]
     properties:
       DEFAULTS:
         grid_display: false
@@ -177,6 +178,7 @@ classes:
   HPILO2Temperature:
     base: [zenpacklib.Component]
     label: HP Temperature
+    monitoring_templates: [HPILO2Temperature]
     properties:
       DEFAULTS:
         grid_display: false
@@ -201,6 +203,7 @@ classes:
   HPILO2PowerSupply:
     base: [zenpacklib.Component]
     label: HP Power Supply
+    monitoring_templates: [HPILO2PowerSupply]
     plural_label: HP Power Supplies
     properties:
       DEFAULTS:
@@ -227,6 +230,7 @@ classes:
   HPILO2PhysicalDrive:
     base: [zenpacklib.Component]
     label: HP Physical Drive
+    monitoring_templates: [HPILO2PhysicalDrive]
     properties:
       DEFAULTS:
         grid_display: false
@@ -302,4 +306,59 @@ device_classes:
             datapoints:
               status:
                 rrdtype: GAUGE
+          power:
+            type: Python
+            plugin_classname: ZenPacks.community.HPILO2.dsplugins.HPILO2DataSource.HPILO2DataSourcePluginPower
+            datapoints:
+              power_reading:
+                rrdtype: GAUGE
+        graphs:
+          Power Consumption:
+            width: 1000
+            units: watts
+            miny: 0
 
+            graphpoints:
+              power_consumption:
+                dpName: power_power_reading
+                lineType: AREA
+
+      HPILO2CoolingFan:
+        datasources:
+          fan:
+            type: Python
+            plugin_classname: ZenPacks.community.HPILO2.dsplugins.HPILO2DataSource.HPILO2DataSourcePlugin
+            datapoints:
+              statusfan:
+                rrdtype: GAUGE
+              speed:
+                rrdtype: GAUGE
+
+      HPILO2Temperature:
+        datasources:
+          temperature:
+            type: Python
+            plugin_classname: ZenPacks.community.HPILO2.dsplugins.HPILO2DataSource.HPILO2DataSourcePlugin
+            datapoints:
+              statustemp:
+                rrdtype: GAUGE
+              temperature_reading:
+                rrdtype: GAUGE
+
+      HPILO2PowerSupply:
+        datasources:
+          powersupply:
+            type: Python
+            plugin_classname: ZenPacks.community.HPILO2.dsplugins.HPILO2DataSource.HPILO2DataSourcePlugin
+            datapoints:
+              statusps:
+                rrdtype: GAUGE
+
+      HPILO2PhysicalDrive:
+        datasources:
+          physicaldrive:
+            type: Python
+            plugin_classname: ZenPacks.community.HPILO2.dsplugins.HPILO2DataSource.HPILO2DataSourcePlugin
+            datapoints:
+              statuspdrive:
+                rrdtype: GAUGE

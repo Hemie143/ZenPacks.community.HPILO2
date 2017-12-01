@@ -8,6 +8,7 @@ from ZenPacks.zenoss.PythonCollector.datasources.PythonDataSource import PythonD
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from ZenPacks.community.HPILO2.lib.ILO2ProtocolHandler import ILO2ProtocolHandler
+from ZenPacks.community.HPILO2.lib.ILO2XMLParser import parse
 
 import logging
 log = logging.getLogger('zen.HPILO2')
@@ -74,7 +75,7 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
         # log.info('client: {}'.format(client))
         # d = client.send_command(get_cmd('GET_EMBEDDED_HEALTH'))
 
-        data = self.new_data()
+        # data = self.new_data()
 
         # TODO : cleanup
         '''
@@ -86,7 +87,7 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
             # results = yield DeferredList(deferreds, consumeErrors=True)
             deferreds.append(d)
         '''
-        sem = DeferredSemaphore(1)
+        #sem = DeferredSemaphore(1)
         # d = sem.run(client.send_command, get_cmd('GET_EMBEDDED_HEALTH'))
         data = yield client.send_command(get_cmd('GET_EMBEDDED_HEALTH'))
         # returnValue(data)
@@ -101,12 +102,17 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
         You can omit this method if you want the result of the collect method
         to be used without further processing.
         """
-        log.debug('result is %s ' % (result))
+        log.debug('result is %s ' % result)
 
         return result
 
     def onSuccess(self, result, config):
-
+        '''
+        for ds in config.datasources:
+            # log.info('ds: {} - {}'.format(ds.datasource, ds.component))
+            log.info('ds: {}'.format(ds.datasource))
+            pass
+        '''
         return result
 
     def onError(self, result, config):
@@ -120,7 +126,7 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
         log.debug('In OnError - result is %s and config is %s ' % (result, config))
         return {
             'events': [{
-                'summary': 'Error getting HPILO2DataSourcePlugin component services data with zenpython: %s' % result,
+                'summary': 'Error getting HPILO2DataSourcePlugin component data with zenpython: %s' % result,
                 'eventKey': 'HPILO2DataSourcePlugin',
                 'severity': 4,
             }],
@@ -136,3 +142,79 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
         log.debug('Starting HPILO2DataSourcePlugin onComplete')
         return result
 
+
+class HPILO2DataSourcePluginPower(PythonDataSourcePlugin):
+    # List of device attributes you might need to do collection.
+
+    proxy_attributes = (
+        'zILO2UserName',
+        'zILO2Password',
+        'zILO2UseSSL',
+        'zILO2Port',
+        'zCollectorClientTimeout',
+        )
+
+    @classmethod
+    def config_key(cls, datasource, context):
+        log.debug(
+            'In config_key context.device().id is %s datasource.getCycleTime(context) is %s datasource.rrdTemplate().id is %s datasource.id is %s datasource.plugin_classname is %s  ' % (
+            context.device().id, datasource.getCycleTime(context), datasource.rrdTemplate().id, datasource.id,
+            datasource.plugin_classname))
+        return (
+            context.device().id,
+            datasource.getCycleTime(context),
+            datasource.rrdTemplate().id,
+            datasource.id,
+            datasource.plugin_classname,
+        )
+
+    @classmethod
+    def params(cls, datasource, context):
+        log.debug('Starting HPChassis params')
+        params = {}
+        log.debug('params is {} \n'.format(params))
+        return params
+
+    @inlineCallbacks
+    def collect(self, config):
+        ds0 = config.datasources[0]
+        ip_address = config.manageIp
+        client = ILO2ProtocolHandler(ip_address,
+                                     ds0.zILO2Port,
+                                     ds0.zILO2UserName,
+                                     ds0.zILO2Password,
+                                     ds0.zILO2UseSSL,
+                                     ds0.zCollectorClientTimeout)
+        data = yield client.send_command(get_cmd('GET_POWER_READINGS'))
+        returnValue(data)
+
+    def onResult(self, result, config):
+        log.debug('result is %s ' % result)
+
+        return result
+
+    def onSuccess(self, result, config):
+        ds0 = config.datasources[0]
+        component = ds0.component
+        data = self.new_data()
+        parsed = parse(result)
+        power_readings = parsed.get('GET_POWER_READINGS', [])
+        for item in power_readings:
+            present = item.get('PRESENT_POWER_READING', '')
+            if present:
+                value = float(present['VALUE'])
+                data['values'][component]['power_reading'] = (value, 'N')
+                break
+        log.debug('HPILO2DataSourcePluginPower data: {}'.format(data))
+        return data
+
+
+
+'''
+<GET_POWER_READINGS>
+<PRESENT_POWER_READING VALUE="113" UNIT="Watts"/>
+<AVERAGE_POWER_READING VALUE="113" UNIT="Watts"/>
+<MAXIMUM_POWER_READING VALUE="150" UNIT="Watts"/>
+<MINIMUM_POWER_READING VALUE="112" UNIT="Watts"/>
+</GET_POWER_READINGS>
+'''

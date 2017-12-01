@@ -17,6 +17,7 @@ log = logging.getLogger('zen.ILO2XMLParser')
 # class ILO2XMLParser(object):
 #     '''Parser for ILO2 XML output'''
 
+
 def find_item(target, tag, label, items):
     ''' return dictionary based on tag given a
         list of dictionaries
@@ -24,12 +25,13 @@ def find_item(target, tag, label, items):
     if not isinstance(items, list):
         log.warn('find_item only accepts list: {}'.format(items))
         return
-    items = self.get_merged_items(items)
+    items = get_merged_items(items)
     for i in items:
         if i.get(tag, {}).get(label) == target:
             log.debug('Match ({}) found for target ({}) using {}:{}'.format(i, target, tag, label))
             return i
     return
+
 
 def get_merged_items(items):
     '''return list of dictionaries'''
@@ -49,11 +51,12 @@ def get_merged_items(items):
             log.warn('get_merged_items found multiple entries for: {}'.format(i))
             continue
         try:
-            merged = self.get_merged(vals[0])
+            merged = get_merged(vals[0])
             output.append(merged)
         except Exception as e:
             log.warn('Error ({}) occurred while parsing {} ({})'.format(e, i, vals))
     return output
+
 
 def get_merged(items):
     '''return recursively merged dictionary'''
@@ -69,6 +72,7 @@ def get_merged(items):
         merge_dict(new, i)
     return new
 
+
 def get_items_by_key(key, items):
     '''return items with a given key'''
     output = []
@@ -77,6 +81,7 @@ def get_items_by_key(key, items):
             output.append(i)
     return output
 
+
 def normalize(results):
     new = {}
     for r in results:
@@ -84,6 +89,7 @@ def normalize(results):
         for k in ribcl:
             new.update(k)
     return new
+
 
 def to_skip(ele):
     '''don't bother processing this element'''
@@ -107,7 +113,7 @@ def parse(xml_doc):
             version = stat.get('VERSION', 'Unknown')
             message = stat.get('MESSAGE', 'Unknown')
             code = stat.get('STATUS', 'Unknown')
-            info = self.get_info(r)
+            info = get_info(r)
             # log any failure messages
             if stat.get('MESSAGE', 'Unknown') != 'No error':
                 msg = 'RIBCL (V: {}) returned: {} ({})'.format(version, message, code)
@@ -116,7 +122,8 @@ def parse(xml_doc):
     else:
         log.error('Error parsing XML document')
     log.info('parse results: {}'.format(results))
-    return self.normalize(results)
+    return normalize(results)
+
 
 def find_items_by_tag(data, tag):
     '''recursive search for data dictionaries with a given key'''
@@ -127,19 +134,20 @@ def find_items_by_tag(data, tag):
                 items.append({k: v})
             if isinstance(v, list):
                 for u in v:
-                    items += self.find_items_by_tag(u, tag)
+                    items += find_items_by_tag(u, tag)
     elif isinstance(data, list):
         for d in data:
-            items += self.find_items_by_tag(d, tag)
+            items += find_items_by_tag(d, tag)
     return items
+
 
 def get_info(element, skipped=None):
     '''return combo list/dictionary representing element
     '''
     info = []
     for x in element.iterchildren('*'):
-        if self.to_skip(x):
-            ob = self.get_info(x, x.attrib)
+        if to_skip(x):
+            ob = get_info(x, x.attrib)
         else:
             ob = {x.tag: dict(x.attrib)}
         if isinstance(ob.get(x.tag), list) and len(ob.get(x.tag)) == 0:
@@ -148,6 +156,7 @@ def get_info(element, skipped=None):
     if skipped:
         info.append(skipped)
     return {element.tag: info}
+
 
 def get_useful_data(parsed):
     '''return True if parsed data is useful'''
@@ -177,6 +186,7 @@ def load_xml_doc(xml_doc):
         except Exception as e:
             log.error('Error loading XML document ({})'.format(e))
     return result
+
 
 def get_response_status(element):
     '''determine query response code'''
