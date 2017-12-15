@@ -82,7 +82,7 @@ class ILO2ProtocolHandler(object):
         xml_request = self.format_request(cmd)
         self._msg = xml_request
         log.debug('Sending XML: {}'.format(xml_request))
-        endpoint = yield self._connect()
+        endpoint = yield self.connect()
         df = yield self.writeProtocol(endpoint, self._msg)
         response = str(df)
         #return self.get(xml_request)
@@ -95,12 +95,12 @@ class ILO2ProtocolHandler(object):
     def test_request(self):
         ''''example request'''
         #return self.send_command(self.get_cmd('GET_SERVER_NAME'))
-        return self.send_command(self.get_cmd('GET_EMBEDDED_HEALTH'))
+        return self.send_command(self.get_cmd('GET_SERVER_NAME'))
 
     def format_request(self, body):
         '''boilerplate xml body'''
         envelope = '<?xml version=\"1.0\"?>' \
-                   '< RIBCL VERSION = "{}" >' \
+                   '<RIBCL VERSION="{}">' \
                     '<LOGIN USER_LOGIN="{}" PASSWORD="{}">' \
                     '{}</LOGIN></RIBCL>\r\n'
         return envelope.format(self.ribcl, self.username, self.password, body)
@@ -110,7 +110,7 @@ class ILO2ProtocolHandler(object):
         return '<{} MODE=\"read\"><{}/></{}>'.format(tag, cmd, tag)
 
     @inlineCallbacks
-    def _connect(self):
+    def connect(self):
         endpoint = yield SSL4ClientEndpoint(
                         reactor,
                         self.host,
@@ -121,7 +121,7 @@ class ILO2ProtocolHandler(object):
     def _req(self, data=None):
         """return Deferred request the ILO """
         log.debug('Sending to {}:\n{}'.format(self.host, data))
-        endpoint = yield self._connect()
+        endpoint = yield self.connect()
         df = yield self.writeProtocol(endpoint, data)
         response = str(df)
         returnValue(response)
@@ -221,7 +221,7 @@ def print_and_stop(output, client):
 
 
 if __name__ == '__main__':
-    client = ILO2ProtocolHandler('10.4.100.159', 443, 'ilomon', '')
+    client = ILO2ProtocolHandler('10.4.100.140', 443, 'ilomon', '')
     d = client.test_request()
     d.addCallback(print_and_stop, client)
     reactor.run()

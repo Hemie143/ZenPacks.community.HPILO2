@@ -13,7 +13,8 @@ import logging
 log = logging.getLogger('zen.ILO2XMLParser')
 
 
-# TODO: there should be no need to use a class, a module library with functions should be OK
+# TODO: Investigate possibility to create a smarter parser. Current structure isn't easy to query and
+# requires a lot of parsing
 # class ILO2XMLParser(object):
 #     '''Parser for ILO2 XML output'''
 
@@ -121,7 +122,7 @@ def parse(xml_doc):
             results.append(info)
     else:
         log.error('Error parsing XML document')
-    log.info('parse results: {}'.format(results))
+    # log.debug('parse results: {}'.format(results))
     return normalize(results)
 
 
@@ -197,3 +198,11 @@ def get_response_status(element):
         if response is not None:
             data.update(dict(response.attrib))
     return data
+
+
+def get_health_data_section(data, key):
+    """return component object data from a given section"""
+    for h in data:
+        if key in h.keys():
+            return h.get(key, [])
+    return []

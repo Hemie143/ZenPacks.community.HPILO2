@@ -3,12 +3,13 @@ from twisted.internet.defer import DeferredSemaphore, DeferredList, inlineCallba
 from twisted.web.client import getPage
 
 from ZenPacks.zenoss.PythonCollector.datasources.PythonDataSource import PythonDataSourcePlugin
+from Products.ZenUtils.Utils import prepId
 
 # Twisted Imports
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from ZenPacks.community.HPILO2.lib.ILO2ProtocolHandler import ILO2ProtocolHandler
-from ZenPacks.community.HPILO2.lib.ILO2XMLParser import parse
+from ZenPacks.community.HPILO2.lib.ILO2XMLParser import parse, get_merged, get_health_data_section
 
 import logging
 log = logging.getLogger('zen.HPILO2')
@@ -31,12 +32,14 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
         'zCollectorClientTimeout',
         )
 
+    # TODO: check that execution is unique for all components
     @classmethod
     def config_key(cls, datasource, context):
         log.debug(
-            'In config_key context.device().id is %s datasource.getCycleTime(context) is %s datasource.rrdTemplate().id is %s datasource.id is %s datasource.plugin_classname is %s  ' % (
-            context.device().id, datasource.getCycleTime(context), datasource.rrdTemplate().id, datasource.id,
-            datasource.plugin_classname))
+            'In config_key context.device().id is %s datasource.getCycleTime(context) is %s \ '
+            'datasource.rrdTemplate().id is %s datasource.id is %s datasource.plugin_classname is %s  ' % (
+                context.device().id, datasource.getCycleTime(context), datasource.rrdTemplate().id, datasource.id,
+                datasource.plugin_classname))
         return (
             context.device().id,
             datasource.getCycleTime(context),
@@ -55,65 +58,102 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
     @inlineCallbacks
     def collect(self, config):
         ds0 = config.datasources[0]
-        log.info('config: {}'.format(ds0))
-        log.info('config.id: {}'.format(config.id))
-
-
-        log.info('zILO2Port: {}'.format(config.datasources[0].zILO2Port))
-
         ip_address = config.manageIp
-        log.info('ip_address: {}'.format(ip_address))
-
-
         client = ILO2ProtocolHandler(ip_address,
                                      ds0.zILO2Port,
                                      ds0.zILO2UserName,
                                      ds0.zILO2Password,
                                      ds0.zILO2UseSSL,
                                      ds0.zCollectorClientTimeout)
-
-        # log.info('client: {}'.format(client))
-        # d = client.send_command(get_cmd('GET_EMBEDDED_HEALTH'))
-
-        # data = self.new_data()
-
-        # TODO : cleanup
-        '''
-        deferreds = []
-        sem = DeferredSemaphore(1)
-        for datasource in config.datasources:
-            log.info('datasource: {}'.format(datasource.datasource))
-            d = sem.run(client.send_command, get_cmd('GET_EMBEDDED_HEALTH'))
-            # results = yield DeferredList(deferreds, consumeErrors=True)
-            deferreds.append(d)
-        '''
-        #sem = DeferredSemaphore(1)
-        # d = sem.run(client.send_command, get_cmd('GET_EMBEDDED_HEALTH'))
         data = yield client.send_command(get_cmd('GET_EMBEDDED_HEALTH'))
-        # returnValue(data)
-        # return DeferredList(deferreds)
-        #return d
+        # log.debug('data is %s ' % data)
         returnValue(data)
 
     def onResult(self, result, config):
-        """
-        Called first for success and error.
-
-        You can omit this method if you want the result of the collect method
-        to be used without further processing.
-        """
-        log.debug('result is %s ' % result)
-
+        # log.debug('result is %s ' % result)
         return result
+
+    def get_fans_data(self, comp_data, component):
+        data = self.new_data()
+        for item in comp_data:
+            item_data = get_merged(item.get('FAN', []))
+            if component == item_data.get('LABEL', {}).get('VALUE'):
+                speed = item_data.get('SPEED', {}).get('VALUE')
+                status = item_data.get('STATUS', {}).get('VALUE').upper()
+                comp_data.remove(item)
+                break
+        data['values'][prepId(component)]['statusfan'] = (1, 'N') if status == 'OK' else (0, 'N')
+        data['values'][prepId(component)]['speed'] = (speed, 'N')
+        return data
+
+    def get_temps_data(self, comp_data, component):
+        data = self.new_data()
+        for item in comp_data:
+            item_data = get_merged(item.get('TEMP', []))
+            if component == item_data.get('LABEL', {}).get('VALUE'):
+                speed = item_data.get('CURRENTREADING', {}).get('VALUE')
+                status = item_data.get('STATUS', {}).get('VALUE').upper()
+                comp_data.remove(item)
+                break
+        data['values'][prepId(component)]['statustemp'] = (1, 'N') if status == 'OK' else (0, 'N')
+        data['values'][prepId(component)]['temperature_reading'] = (speed, 'N')
+        return data
+
+    def get_powersupplies_data(self, comp_data, component):
+        data = self.new_data()
+        for item in comp_data:
+            item_data = get_merged(item.get('SUPPLY', []))
+            if component == item_data.get('LABEL', {}).get('VALUE'):
+                status = item_data.get('STATUS', {}).get('VALUE').upper()
+                comp_data.remove(item)
+                break
+        data['values'][prepId(component)]['statusps'] = (1, 'N') if status == 'OK' else (0, 'N')
+        return data
+
+    def get_drives_data(self, comp_data, component):
+        data = self.new_data()
+        found_bay = False
+        for backplane in comp_data:
+            backplane_data = backplane.get('BACKPLANE')
+            for item in backplane_data:
+                if item.keys()[0] == 'DRIVE' and 'Bay {}'.format(item['DRIVE']['BAY']) == component:
+                    found_bay = True
+                if found_bay and item.keys()[0] == 'DRIVE_STATUS':
+                    status = item.get('DRIVE_STATUS').get('VALUE').upper()
+                    break
+            if status:
+                break
+        data['values'][prepId(component)]['statuspdrive'] = (1, 'N') if status == 'OK' else (0, 'N')
+        return data
 
     def onSuccess(self, result, config):
-        '''
+        maps = {
+            'fan': {'tag': 'FANS', 'func': 'get_fans_data'},
+            'temperature': {'tag': 'TEMPERATURE', 'func': 'get_temps_data'},
+            'powersupply': {'tag': 'POWER_SUPPLIES', 'func': 'get_powersupplies_data'},
+            'physicaldrive': {'tag': 'DRIVES', 'func': 'get_drives_data'},
+        }
+
+        data = self.new_data()
+        parsed = parse(result)
+        health_comp_data = None
+        health_data = parsed.get('GET_EMBEDDED_HEALTH_DATA', {})
+        ds0 = config.datasources[0]
+        if ds0.datasource in maps.keys():
+            tag = maps[ds0.datasource]['tag']
+            get_comp_data = getattr(self, maps[ds0.datasource]['func'])
+            health_comp_data = get_health_data_section(health_data, tag)
+
         for ds in config.datasources:
-            # log.info('ds: {} - {}'.format(ds.datasource, ds.component))
-            log.info('ds: {}'.format(ds.datasource))
-            pass
-        '''
-        return result
+            if health_comp_data:
+                comp_data = get_comp_data(health_comp_data, ds.component)
+                for k, v in comp_data.items():
+                    if k in ['maps', 'events']:
+                        data[k].extend(v)
+                    else:
+                        data[k].update(v)
+        log.debug('HPILO2DataSourcePlugin data: {}'.format(data))
+        return data
 
     def onError(self, result, config):
         """
@@ -157,9 +197,10 @@ class HPILO2DataSourcePluginPower(PythonDataSourcePlugin):
     @classmethod
     def config_key(cls, datasource, context):
         log.debug(
-            'In config_key context.device().id is %s datasource.getCycleTime(context) is %s datasource.rrdTemplate().id is %s datasource.id is %s datasource.plugin_classname is %s  ' % (
-            context.device().id, datasource.getCycleTime(context), datasource.rrdTemplate().id, datasource.id,
-            datasource.plugin_classname))
+            'In config_key context.device().id is %s datasource.getCycleTime(context) is %s \
+            datasource.rrdTemplate().id is %s datasource.id is %s datasource.plugin_classname is %s  ' % (
+                context.device().id, datasource.getCycleTime(context), datasource.rrdTemplate().id, datasource.id,
+                datasource.plugin_classname))
         return (
             context.device().id,
             datasource.getCycleTime(context),
@@ -189,8 +230,7 @@ class HPILO2DataSourcePluginPower(PythonDataSourcePlugin):
         returnValue(data)
 
     def onResult(self, result, config):
-        log.debug('result is %s ' % result)
-
+        # log.debug('result is %s ' % result)
         return result
 
     def onSuccess(self, result, config):
@@ -208,13 +248,3 @@ class HPILO2DataSourcePluginPower(PythonDataSourcePlugin):
         log.debug('HPILO2DataSourcePluginPower data: {}'.format(data))
         return data
 
-
-
-'''
-<GET_POWER_READINGS>
-<PRESENT_POWER_READING VALUE="113" UNIT="Watts"/>
-<AVERAGE_POWER_READING VALUE="113" UNIT="Watts"/>
-<MAXIMUM_POWER_READING VALUE="150" UNIT="Watts"/>
-<MINIMUM_POWER_READING VALUE="112" UNIT="Watts"/>
-</GET_POWER_READINGS>
-'''

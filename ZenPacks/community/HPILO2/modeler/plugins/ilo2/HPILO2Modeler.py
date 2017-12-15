@@ -91,6 +91,11 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         if not self.server_name:
             return maps
 
+        self.server_data = result_data.get('GET_SERVER_NAME', {})
+
+        log.info('server_data: {}'.format(self.server_data))
+
+
         self.host_data = result_data.get('GET_HOST_DATA', {})
         self.fw_data = result_data.get('GET_FW_VERSION', {})
         self.health_data = result_data.get('GET_EMBEDDED_HEALTH_DATA', {})
@@ -162,6 +167,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         return
 
     # Parser helpers
+    # TODO: Move to ILO2XMLParser
     def get_health_data_section(self, key):
         """return component object data from a given section"""
         for h in self.health_data:
@@ -355,6 +361,9 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             om = ObjectMap(ob_map)
             name = data.get('LABEL', {}).get('VALUE')
             if not name:
+                continue
+            status = data.get('STATUS', {}).get('VALUE')
+            if status.upper() == 'N/A':
                 continue
             om.id = prepId(name)
             om.title = name

@@ -299,6 +299,7 @@ device_classes:
 
     templates:
       HPILO2Chassis:
+        # TODO : add targetPythonClass ??
         datasources:
           chassis:
             type: Python
@@ -317,7 +318,6 @@ device_classes:
             width: 1000
             units: watts
             miny: 0
-
             graphpoints:
               power_consumption:
                 dpName: power_power_reading
@@ -333,6 +333,23 @@ device_classes:
                 rrdtype: GAUGE
               speed:
                 rrdtype: GAUGE
+        graphs:
+          Fan Speed:
+            width: 1000
+            units: percent
+            miny: 0
+            maxy: 100
+            graphpoints:
+              speed:
+                dpName: fan_speed
+                lineType: AREA
+          Fan Status:
+            width: 1000
+            miny: 0
+            maxy: 1
+            graphpoints:
+              status:
+                dpName: fan_statusfan
 
       HPILO2Temperature:
         datasources:
@@ -344,6 +361,22 @@ device_classes:
                 rrdtype: GAUGE
               temperature_reading:
                 rrdtype: GAUGE
+        graphs:
+          Temperature Reading:
+            width: 1000
+            units: °C
+            miny: 0
+            graphpoints:
+              temperature:
+                dpName: temperature_temperature_reading
+                lineType: AREA
+          Temperature Status:
+            width: 1000
+            miny: 0
+            maxy: 1
+            graphpoints:
+              status:
+                dpName: temperature_statustemp
 
       HPILO2PowerSupply:
         datasources:
@@ -353,6 +386,14 @@ device_classes:
             datapoints:
               statusps:
                 rrdtype: GAUGE
+        graphs:
+          Power Supply Status:
+            width: 1000
+            miny: 0
+            maxy: 1
+            graphpoints:
+              status:
+                dpName: powersupply_statusps
 
       HPILO2PhysicalDrive:
         datasources:
@@ -362,3 +403,11 @@ device_classes:
             datapoints:
               statuspdrive:
                 rrdtype: GAUGE
+        graphs:
+          Physical Drive Status:
+            width: 1000
+            miny: 0
+            maxy: 1
+            graphpoints:
+              status:
+                dpName: physicaldrive_statuspdrive
