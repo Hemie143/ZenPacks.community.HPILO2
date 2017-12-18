@@ -86,14 +86,18 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
             parsed = parse(result)
             result_data.update(parsed)
 
+        log.info('result_data: {}'.format(result_data))
+
+
         self.server_name = result_data.get('SERVER_NAME', {}).get('VALUE')
         # this means we didn't get good output
         if not self.server_name:
             return maps
 
-        self.server_data = result_data.get('GET_SERVER_NAME', {})
+        self.server_data = result_data.get('SERVER_NAME', {})
 
         log.info('server_data: {}'.format(self.server_data))
+        log.info('server_name: {}'.format(self.server_name))
 
 
         self.host_data = result_data.get('GET_HOST_DATA', {})
@@ -225,7 +229,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
         """HPILO2Chassis"""
         ob_map = get_object_map('HPILO2Chassis')
         om = ObjectMap(ob_map)
-        name = self.serial
+        name = self.server_name
         om.id = prepId(name)
         om.title = name
         om.serverName = self.server_name
@@ -253,7 +257,7 @@ class HPILO2Modeler(HPPluginBase, PythonPlugin):
                                    self.find_host_data_item('Date'))
         om.serialNo = self.serial
         om.productName = self.product
-        om.uuid = self.find_host_data_item('cUUID')
+        om.cuuid = self.find_host_data_item('cUUID')
         return RelationshipMap(relname='hpilo2systemboard',
                                compname=self.compname,
                                modname='ZenPacks.community.HPILO2.HPILO2SystemBoard',

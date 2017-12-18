@@ -100,7 +100,7 @@ classes:
       serialNo:
         label: Serial Number
         grid_display: true
-      uuid:
+      cuuid:
         label: UUID
         grid_display: true
         content_width: 180
@@ -171,8 +171,13 @@ classes:
         grid_display: true
       speed:
         label: Speed
-        api_only: true
-        api_backendtype: method
+        datapoint: fan_speed
+        grid_display: true
+      status:
+        label: Status
+        type: string
+        datapoint: fan_statusfan
+        renderer: Zenoss.render.severity
         grid_display: true
 
   HPILO2Temperature:
@@ -187,9 +192,15 @@ classes:
         grid_display: true
       currentReading:
         label: Current
-        datapoint: currentReading_currentReading
+        datapoint: temperature_temperature_reading
         datapoint_default: 0
         renderer: Zenoss.render.ilo2_temp_celsius
+        grid_display: true
+      status:
+        label: Status
+        type: string
+        datapoint: temperature_statustemp
+        renderer: Zenoss.render.severity
         grid_display: true
       caution:
         label: Caution
@@ -210,8 +221,9 @@ classes:
         grid_display: false
       status:
         label: Status
-        api_only: true
-        api_backendtype: method
+        type: string
+        datapoint: powersupply_statusps
+        renderer: Zenoss.render.severity
         grid_display: true
 
   HPILO2Enclosure:
@@ -245,8 +257,9 @@ classes:
         grid_display: true
       driveStatus:
         label: Status
-        api_only: true
-        api_backendtype: method
+        type: string
+        datapoint: physicaldrive_statuspdrive
+        renderer: Zenoss.render.severity
         grid_display: true
       uid_led:
         label: LED
@@ -331,6 +344,17 @@ device_classes:
             datapoints:
               statusfan:
                 rrdtype: GAUGE
+                createCmd: 'RRA:AVERAGE:0.5:1:600
+                  RRA:AVERAGE:0.5:6:600
+                  RRA:AVERAGE:0.5:24:600
+                  RRA:AVERAGE:0.5:288:600
+                  RRA:MAX:0.5:6:600
+                  RRA:MAX:0.5:24:600
+                  RRA:MAX:0.5:288:600
+                  RRA:LAST:0.5:1:600
+                  RRA:LAST:0.5:6:600
+                  RRA:LAST:0.5:24:600
+                  RRA:LAST:0.5:288:600'
               speed:
                 rrdtype: GAUGE
         graphs:
@@ -343,13 +367,6 @@ device_classes:
               speed:
                 dpName: fan_speed
                 lineType: AREA
-          Fan Status:
-            width: 1000
-            miny: 0
-            maxy: 1
-            graphpoints:
-              status:
-                dpName: fan_statusfan
 
       HPILO2Temperature:
         datasources:
@@ -359,6 +376,17 @@ device_classes:
             datapoints:
               statustemp:
                 rrdtype: GAUGE
+                createCmd: 'RRA:AVERAGE:0.5:1:600
+                  RRA:AVERAGE:0.5:6:600
+                  RRA:AVERAGE:0.5:24:600
+                  RRA:AVERAGE:0.5:288:600
+                  RRA:MAX:0.5:6:600
+                  RRA:MAX:0.5:24:600
+                  RRA:MAX:0.5:288:600
+                  RRA:LAST:0.5:1:600
+                  RRA:LAST:0.5:6:600
+                  RRA:LAST:0.5:24:600
+                  RRA:LAST:0.5:288:600'
               temperature_reading:
                 rrdtype: GAUGE
         graphs:
@@ -370,14 +398,6 @@ device_classes:
               temperature:
                 dpName: temperature_temperature_reading
                 lineType: AREA
-          Temperature Status:
-            width: 1000
-            miny: 0
-            maxy: 1
-            graphpoints:
-              status:
-                dpName: temperature_statustemp
-
       HPILO2PowerSupply:
         datasources:
           powersupply:
@@ -386,14 +406,17 @@ device_classes:
             datapoints:
               statusps:
                 rrdtype: GAUGE
-        graphs:
-          Power Supply Status:
-            width: 1000
-            miny: 0
-            maxy: 1
-            graphpoints:
-              status:
-                dpName: powersupply_statusps
+                createCmd: 'RRA:AVERAGE:0.5:1:600
+                  RRA:AVERAGE:0.5:6:600
+                  RRA:AVERAGE:0.5:24:600
+                  RRA:AVERAGE:0.5:288:600
+                  RRA:MAX:0.5:6:600
+                  RRA:MAX:0.5:24:600
+                  RRA:MAX:0.5:288:600
+                  RRA:LAST:0.5:1:600
+                  RRA:LAST:0.5:6:600
+                  RRA:LAST:0.5:24:600
+                  RRA:LAST:0.5:288:600'
 
       HPILO2PhysicalDrive:
         datasources:
@@ -403,11 +426,14 @@ device_classes:
             datapoints:
               statuspdrive:
                 rrdtype: GAUGE
-        graphs:
-          Physical Drive Status:
-            width: 1000
-            miny: 0
-            maxy: 1
-            graphpoints:
-              status:
-                dpName: physicaldrive_statuspdrive
+                createCmd: 'RRA:AVERAGE:0.5:1:600
+                  RRA:AVERAGE:0.5:6:600
+                  RRA:AVERAGE:0.5:24:600
+                  RRA:AVERAGE:0.5:288:600
+                  RRA:MAX:0.5:6:600
+                  RRA:MAX:0.5:24:600
+                  RRA:MAX:0.5:288:600
+                  RRA:LAST:0.5:1:600
+                  RRA:LAST:0.5:6:600
+                  RRA:LAST:0.5:24:600
+                  RRA:LAST:0.5:288:600'

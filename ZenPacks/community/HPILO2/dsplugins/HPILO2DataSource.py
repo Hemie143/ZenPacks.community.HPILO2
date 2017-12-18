@@ -1,4 +1,6 @@
 #
+# coding: utf-8
+
 from twisted.internet.defer import DeferredSemaphore, DeferredList, inlineCallbacks, returnValue, deferredGenerator
 from twisted.web.client import getPage
 
@@ -15,12 +17,6 @@ import logging
 log = logging.getLogger('zen.HPILO2')
 
 
-# TODO: Move this function to a better place
-def get_cmd(cmd='GET_EMBEDDED_HEALTH', tag='SERVER_INFO'):
-    """return formatted RIBCL command"""
-    return '<{} MODE=\"read\"><{}/></{}>'.format(tag, cmd, tag)
-
-
 class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
     # List of device attributes you might need to do collection.
 
@@ -32,19 +28,15 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
         'zCollectorClientTimeout',
         )
 
-    # TODO: check that execution is unique for all components
     @classmethod
     def config_key(cls, datasource, context):
-        log.debug(
+        log.info(
             'In config_key context.device().id is %s datasource.getCycleTime(context) is %s \ '
-            'datasource.rrdTemplate().id is %s datasource.id is %s datasource.plugin_classname is %s  ' % (
-                context.device().id, datasource.getCycleTime(context), datasource.rrdTemplate().id, datasource.id,
-                datasource.plugin_classname))
+            'datasource.plugin_classname is %s  ' % (
+                context.device().id, datasource.getCycleTime(context), datasource.plugin_classname))
         return (
             context.device().id,
             datasource.getCycleTime(context),
-            datasource.rrdTemplate().id,
-            datasource.id,
             datasource.plugin_classname,
         )
 
@@ -54,6 +46,11 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
         params = {}
         log.debug('params is {} \n'.format(params))
         return params
+
+    @classmethod
+    def get_cmd(cls, cmd='GET_EMBEDDED_HEALTH', tag='SERVER_INFO'):
+        """return formatted RIBCL command"""
+        return '<{} MODE=\"read\"><{}/></{}>'.format(tag, cmd, tag)
 
     @inlineCallbacks
     def collect(self, config):
@@ -65,52 +62,151 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
                                      ds0.zILO2Password,
                                      ds0.zILO2UseSSL,
                                      ds0.zCollectorClientTimeout)
-        data = yield client.send_command(get_cmd('GET_EMBEDDED_HEALTH'))
-        # log.debug('data is %s ' % data)
+        data = yield client.send_command(self.get_cmd('GET_EMBEDDED_HEALTH'))
+        log.debug('collect data is %s ' % data)
         returnValue(data)
 
     def onResult(self, result, config):
         # log.debug('result is %s ' % result)
         return result
 
-    def get_fans_data(self, comp_data, component):
+    def get_fans_data(self, config, comp_data, component):
+        status_maps = {
+            'OK': 0,            # Clear
+            'DEGRADED': 3,      # Warning
+            'FAILED': 5,        # Critical
+        }
+        ds0 = config.datasources[0]
+
         data = self.new_data()
         for item in comp_data:
             item_data = get_merged(item.get('FAN', []))
             if component == item_data.get('LABEL', {}).get('VALUE'):
                 speed = item_data.get('SPEED', {}).get('VALUE')
-                status = item_data.get('STATUS', {}).get('VALUE').upper()
+                status = item_data.get('STATUS', {}).get('VALUE')
+                status_value = status_maps.get(status.upper(), 3)
                 comp_data.remove(item)
                 break
-        data['values'][prepId(component)]['statusfan'] = (1, 'N') if status == 'OK' else (0, 'N')
+        data['values'][prepId(component)]['statusfan'] = (status_value, 'N')
         data['values'][prepId(component)]['speed'] = (speed, 'N')
+        data['events'].append({
+            'device': config.id,
+            'component': component,
+            'severity': status_value,
+            'eventKey': ds0.plugin_classname,
+            'eventClassKey': 'FanStatus',
+            'summary': 'Fan status is {}'.format(status),
+            'eventClass': '/HW/Temperature/Fan',
+        })
         return data
 
-    def get_temps_data(self, comp_data, component):
+    def get_temps_data(self, config, comp_data, component):
+        status_maps = {
+            'OK': 0,                # Clear
+            'DEGRADED': 3,          # Warning
+            'FAILED': 5,            # Critical
+            'NOT INSTALLED': 0,     # Clear
+            'N/A': 0,               # Clear
+        }
+        ds0 = config.datasources[0]
         data = self.new_data()
         for item in comp_data:
             item_data = get_merged(item.get('TEMP', []))
             if component == item_data.get('LABEL', {}).get('VALUE'):
-                speed = item_data.get('CURRENTREADING', {}).get('VALUE')
-                status = item_data.get('STATUS', {}).get('VALUE').upper()
+                reading = float(item_data.get('CURRENTREADING', {}).get('VALUE'))
+                caution = float(item_data.get('CAUTION', {}).get('VALUE'))
+                critical = float(item_data.get('CRITICAL', {}).get('VALUE'))
+                status = item_data.get('STATUS', {}).get('VALUE')
+                status_value = status_maps.get(status.upper(), 3)
                 comp_data.remove(item)
                 break
-        data['values'][prepId(component)]['statustemp'] = (1, 'N') if status == 'OK' else (0, 'N')
-        data['values'][prepId(component)]['temperature_reading'] = (speed, 'N')
+        data['values'][prepId(component)]['statustemp'] = (status_value, 'N')
+        data['values'][prepId(component)]['temperature_reading'] = (reading, 'N')
+        if reading >= critical:
+            data['events'].append({
+                'device': config.id,
+                'component': component,
+                'severity': 5,
+                'eventKey': ds0.plugin_classname,
+                'eventClassKey': 'TemperatureReading',
+                'summary': 'Temperature is critical, reading {} °C'.format(reading),
+                'eventClass': '/HW/Temperature',
+            })
+        elif reading >= caution:
+            data['events'].append({
+                'device': config.id,
+                'component': component,
+                'severity': 3,
+                'eventKey': ds0.plugin_classname,
+                'eventClassKey': 'TemperatureReading',
+                'summary': 'Temperature is in warning, reading {} °C'.format(reading),
+                'eventClass': '/HW/Temperature',
+            })
+        else:
+            data['events'].append({
+                'device': config.id,
+                'component': component,
+                'severity': 0,
+                'eventKey': ds0.plugin_classname,
+                'eventClassKey': 'TemperatureReading',
+                'summary': 'Temperature is OK, reading {} °C'.format(reading),
+                'eventClass': '/HW/Temperature',
+            })
+        data['events'].append({
+            'device': config.id,
+            'component': component,
+            'severity': status_value,
+            'eventKey': ds0.plugin_classname,
+            'eventClassKey': 'TemperatureStatus',
+            'summary': 'Temperature status is {}'.format(status),
+            'eventClass': '/HW/Temperature',
+        })
         return data
 
-    def get_powersupplies_data(self, comp_data, component):
+    def get_powersupplies_data(self, config, comp_data, component):
+        status_maps = {
+            'OK': 0,                    # Clear
+            'DEGRADED': 3,              # Warning
+            'FAILED': 5,                # Critical
+            'NOT INSTALLED': 0,         # Clear
+            'GOOD, IN USE': 0,          # Clear
+            'INPUT VOLTAGE LOST': 3,    # Warning
+        }
+        ds0 = config.datasources[0]
         data = self.new_data()
         for item in comp_data:
             item_data = get_merged(item.get('SUPPLY', []))
             if component == item_data.get('LABEL', {}).get('VALUE'):
-                status = item_data.get('STATUS', {}).get('VALUE').upper()
+                status = item_data.get('STATUS', {}).get('VALUE')
+                status_value = status_maps.get(status.upper(), 3)
                 comp_data.remove(item)
                 break
-        data['values'][prepId(component)]['statusps'] = (1, 'N') if status == 'OK' else (0, 'N')
+        data['values'][prepId(component)]['statusps'] = (status_value, 'N')
+        data['events'].append({
+            'device': config.id,
+            'component': component,
+            'severity': status_value,
+            'eventKey': ds0.plugin_classname,
+            'eventClassKey': 'PowerSupplyStatus',
+            'summary': 'Power Supply status is {}'.format(status),
+            'eventClass': '/HW/Power',
+        })
         return data
 
-    def get_drives_data(self, comp_data, component):
+    def get_drives_data(self, config, comp_data, component):
+        status_maps = {
+            'OK': 0,                            # Clear
+            'FAILED': 5,                        # Critical
+            'PREDICTIVE FAILURE': 3,            # Warning
+            'ERASING': 3,                       # Warning
+            'ERASE DONE': 3,                    # Warning
+            'ERASE QUEUED': 3,                  # Warning
+            'SSD WEAR OUT': 3,                  # Warning
+            'NOT AUTHENTICATED': 3,             # Warning
+            'NOT INSTALLED': 0,                 # Clear
+            'NOT PRESENT/NOT INSTALLED': 0,     # Clear
+        }
+        ds0 = config.datasources[0]
         data = self.new_data()
         found_bay = False
         for backplane in comp_data:
@@ -119,11 +215,21 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
                 if item.keys()[0] == 'DRIVE' and 'Bay {}'.format(item['DRIVE']['BAY']) == component:
                     found_bay = True
                 if found_bay and item.keys()[0] == 'DRIVE_STATUS':
-                    status = item.get('DRIVE_STATUS').get('VALUE').upper()
+                    status = item.get('DRIVE_STATUS').get('VALUE')
+                    status_value = status_maps.get(status.upper(), 3)
                     break
             if status:
                 break
-        data['values'][prepId(component)]['statuspdrive'] = (1, 'N') if status == 'OK' else (0, 'N')
+        data['values'][prepId(component)]['statuspdrive'] = (status_value, 'N')
+        data['events'].append({
+            'device': config.id,
+            'component': component,
+            'severity': status_value,
+            'eventKey': ds0.plugin_classname,
+            'eventClassKey': 'PhysicalDriveStatus',
+            'summary': 'Physical Drive status is {}'.format(status),
+            'eventClass': '/HW/Store',
+        })
         return data
 
     def onSuccess(self, result, config):
@@ -133,7 +239,6 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
             'powersupply': {'tag': 'POWER_SUPPLIES', 'func': 'get_powersupplies_data'},
             'physicaldrive': {'tag': 'DRIVES', 'func': 'get_drives_data'},
         }
-
         data = self.new_data()
         parsed = parse(result)
         health_comp_data = None
@@ -146,7 +251,7 @@ class HPILO2DataSourcePlugin(PythonDataSourcePlugin):
 
         for ds in config.datasources:
             if health_comp_data:
-                comp_data = get_comp_data(health_comp_data, ds.component)
+                comp_data = get_comp_data(config, health_comp_data, ds.component)
                 for k, v in comp_data.items():
                     if k in ['maps', 'events']:
                         data[k].extend(v)
@@ -226,7 +331,7 @@ class HPILO2DataSourcePluginPower(PythonDataSourcePlugin):
                                      ds0.zILO2Password,
                                      ds0.zILO2UseSSL,
                                      ds0.zCollectorClientTimeout)
-        data = yield client.send_command(get_cmd('GET_POWER_READINGS'))
+        data = yield client.send_command(self.get_cmd('GET_POWER_READINGS'))
         returnValue(data)
 
     def onResult(self, result, config):
